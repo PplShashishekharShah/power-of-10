@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Whack-a-Mole: Powers of 10</title>
+    <!-- Use specific Phaser 3 version for stability -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #2c3e50;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+        #game-container {
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        // --- Sound Manager using Web Audio API ---
+        const SoundEffect = {
+            audioCtx: null,
+            init() {
+                if (!this.audioCtx) {
+                    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playCorrect() {
+                this.init();
+                const oscillator = this.audioCtx.createOscillator();
+                const gainNode = this.audioCtx.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(440, this.audioCtx.currentTime); 
+                oscillator.frequency.exponentialRampToValueAtTime(880, this.audioCtx.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.3);
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioCtx.destination);
+                oscillator.start();
+                oscillator.stop(this.audioCtx.currentTime + 0.3);
+            },
+            playWrong() {
+                this.init();
+                const oscillator = this.audioCtx.createOscillator();
+                const gainNode = this.audioCtx.createGain();
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(110, this.audioCtx.currentTime); 
+                oscillator.frequency.linearRampToValueAtTime(55, this.audioCtx.currentTime + 0.3);
+                gainNode.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.3);
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioCtx.destination);
+                oscillator.start();
+                oscillator.stop(this.audioCtx.currentTime + 0.3);
+            },
+            playPop() {
+                this.init();
+                const oscillator = this.audioCtx.createOscillator();
+                const gainNode = this.audioCtx.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(200, this.audioCtx.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(600, this.audioCtx.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.05, this.audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.1);
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioCtx.destination);
+                oscillator.start();
+                oscillator.stop(this.audioCtx.currentTime + 0.1);
+            }
+        };
+
+        // --- Helper Functions for Procedural Graphics ---
+        function drawDesertBackground(scene) {
+            let bg = scene.add.graphics();
+            bg.setDepth(0);
+            
+            // Sky
+            bg.fillGradientStyle(0x4a90e2, 0x4a90e2, 0x87CEEB, 0x87CEEB, 1);
+            bg.fillRect(0, 0, 800, 600);
+
+            // Sun
+            bg.fillStyle(0xFFD700, 1);
+            bg.fillCircle(700, 100, 50);
+            
+            // Mountains
+            bg.fillStyle(0x8B4513, 1);
+            bg.fillTriangle(100, 300, 300, 300, 200, 100);
+            bg.fillStyle(0xA0522D, 1);
+            bg.fillTriangle(400, 300, 700, 300, 550, 50);
+            bg.fillStyle(0xCD853F, 1);
+            bg.fillTriangle(600, 300, 900, 300, 750, 150);
+
+            // Sand ground
+            bg.fillStyle(0xF4A460, 1);
+            bg.fillRoundedRect(-50, 200, 900, 450, 50);
+
+            // Cacti
+            bg.fillStyle(0x2E8B57, 1);
+            bg.fillRoundedRect(50, 150, 20, 60, 10);
+            bg.fillRoundedRect(35, 170, 50, 10, 5); // arms
+            bg.fillRoundedRect(720, 180, 20, 50, 8);
+            bg.fillRoundedRect(710, 200, 40, 8, 4);
+
+            // Clouds (Animated)
+            createCloud(scene, 100, 80);
+            createCloud(scene, 500, 60);
+        }
+
+        function createCloud(scene, x, y) {
+            let cloud = scene.add.graphics({ x: x, y: y });
+            cloud.setDepth(0);
+            cloud.fillStyle(0xFFFFFF, 0.8);
+            cloud.fillCircle(0, 0, 30);
+            cloud.fillCircle(30, -10, 40);
+            cloud.fillCircle(60, 0, 30);
+            cloud.fillRoundedRect(-10, 0, 80, 30, 15);
+            
+            scene.tweens.add({
+                targets: cloud,
+                x: x + 100,
+                duration: 10000 + Math.random() * 5000,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        }
+
+        function burstSand(scene, x, y) {
+            for(let i=0; i<8; i++) {
+                let p = scene.add.graphics({x: x, y: y});
+                p.setDepth(5);
+                p.fillStyle(0xF4A460, 1);
+                p.fillCircle(0, 0, 4 + Math.random()*3);
+                let angle = Math.random() * Math.PI; 
+                let dist = 30 + Math.random() * 50;
+                let tx = x + Math.cos(angle) * dist;
+                let ty = y - Math.sin(angle) * dist;
+                scene.tweens.add({
+                    targets: p,
+                    x: tx,
+                    y: ty + 40,
+                    alpha: 0,
+                    duration: 400 + Math.random()*200,
+                    ease: 'Quad.easeOut',
+                    onComplete: () => p.destroy()
+                });
+            }
+        }
+
+        function showFloatingText(scene, x, y, msg, color) {
+            let t = scene.add.text(x, y, msg, {
+                font: 'bold 28px "Arial Black", Arial',
+                fill: color,
+                stroke: '#fff',
+                strokeThickness: 4
+            }).setOrigin(0.5);
+            t.setDepth(60);
+            scene.tweens.add({
+                targets: t,
+                y: y - 80,
+                alpha: 0,
+                duration: 1200,
+                ease: 'Cubic.easeOut',
+                onComplete: () => t.destroy()
+            });
+        }
+
+        function showComboText(scene, x, y, msg) {
+            let colors = ['#FFD700', '#FF4500', '#00FF00', '#00BFFF'];
+            let color = colors[Math.floor(Math.random() * colors.length)];
+            let t = scene.add.text(x, y, msg, {
+                font: 'italic bold 48px "Arial Black", Arial',
+                fill: color,
+                stroke: '#fff',
+                strokeThickness: 6
+            }).setOrigin(0.5);
+            t.setDepth(70);
+            t.setScale(0.5);
+            scene.tweens.add({
+                targets: t,
+                scale: 1.5,
+                alpha: { from: 1, to: 0 },
+                y: y - 100,
+                duration: 1500,
+                ease: 'Back.easeOut',
+                onComplete: () => t.destroy()
+            });
+        }
+
+        function showCrossSign(scene, x, y) {
+            let cross = scene.add.graphics();
+            cross.lineStyle(10, 0xD32F2F, 1); 
+            
+            cross.beginPath();
+            cross.moveTo(x - 30, y - 30);
+            cross.lineTo(x + 30, y + 30);
+            cross.moveTo(x + 30, y - 30);
+            cross.lineTo(x - 30, y + 30);
+            cross.strokePath();
+
+            cross.setDepth(70); 
+
+            scene.tweens.add({
+                targets: cross,
+                alpha: 0,
+                scaleX: 1.5,
+                scaleY: 1.5,
+                duration: 1000,
+                ease: 'Quad.easeOut',
+                onComplete: () => cross.destroy()
+            });
+        }
+
+        // --- Math Generation logic ---
+        function generatePowerOf10Equation(level) {
+            let multiplier, multiplicand, correctAnswer;
+            
+            if (level === 'easy') {
+                multiplicand = Phaser.Math.Between(1, 99);
+                multiplier = Phaser.Math.Between(0, 1) === 0 ? 10 : 100;
+                correctAnswer = multiplicand * multiplier;
+            } else if (level === 'medium') {
+                if (Math.random() > 0.5) {
+                    multiplicand = (Phaser.Math.Between(10, 99) / 10).toFixed(1);
+                    multiplier = Phaser.Math.Between(0, 1) === 0 ? 10 : 100;
+                    correctAnswer = (Number(multiplicand) * multiplier).toFixed(1).replace(/\.0$/, ''); 
+                } else {
+                    multiplicand = Phaser.Math.Between(10, 990);
+                    multiplier = Phaser.Math.Between(0, 1) === 0 ? 10 : 100;
+                    correctAnswer = multiplicand * multiplier;
+                }
+            } else {
+                let decimals = Phaser.Math.Between(1, 3);
+                multiplicand = (Phaser.Math.Between(1, 999) / Math.pow(10, decimals)).toFixed(decimals);
+                multiplier = Phaser.Math.Between(0, 1) === 0 ? 100 : 1000;
+                correctAnswer = parseFloat((Number(multiplicand) * multiplier).toPrecision(12)).toString();
+            }
+
+            let isCorrect = Math.random() < 0.5;
+            let displayAnswer = correctAnswer;
+
+            if (!isCorrect) {
+                let errorType = Phaser.Math.Between(0, 2);
+                if (errorType === 0) {
+                    displayAnswer = (Number(correctAnswer) * 10).toString(); 
+                } else if (errorType === 1) {
+                    displayAnswer = (Number(correctAnswer) / 10).toString(); 
+                } else {
+                    let val = Number(correctAnswer);
+                    if (val > 10) val += (val >= 100 ? 10 : 1);
+                    else val += 0.1;
+                    displayAnswer = parseFloat(val.toPrecision(12)).toString();
+                }
+                if (displayAnswer === correctAnswer) {
+                    displayAnswer = (Number(correctAnswer) + 10).toString();
+                }
+            }
+
+            return {
+                text: `${multiplicand} x ${multiplier}\n= ${displayAnswer}`,
+                isCorrect: isCorrect
+            }
+        }
+
+        // --- Game Classes ---
+
+        class Hammer extends Phaser.GameObjects.Container {
+            constructor(scene) {
+                super(scene, 0, 0);
+                
+                this.setScale(0.7);
+                this.angle = -20; 
+
+                let handle = scene.add.graphics();
+                handle.fillStyle(0x8B4513, 1);
+                handle.fillRoundedRect(-10, -50, 20, 80, 5); 
+                
+                let head = scene.add.graphics();
+                head.fillStyle(0x607D8B, 1);
+                head.fillRoundedRect(-40, -70, 80, 40, 10);
+                
+                let headSide1 = scene.add.graphics();
+                headSide1.fillStyle(0x455A64, 1);
+                headSide1.fillRoundedRect(-45, -65, 10, 30, 5);
+                
+                let headSide2 = scene.add.graphics();
+                headSide2.fillStyle(0x455A64, 1);
+                headSide2.fillRoundedRect(35, -65, 10, 30, 5);
+                
+                this.add([handle, head, headSide1, headSide2]);
+                this.setDepth(100); 
+                scene.add.existing(this);
+                this.isSwinging = false;
+            }
+            
+            swing() {
+                if(this.isSwinging) return;
+                this.isSwinging = true;
+                this.scene.tweens.add({
+                    targets: this,
+                    angle: 45, 
+                    duration: 80,
+                    yoyo: true,
+                    ease: 'Sine.easeInOut',
+                    onYoyo: () => {
+                        if (this.scene.scene.key === 'GameScene' && this.scene.cameras.main) {
+                            this.scene.cameras.main.shake(100, 0.003);
+                        }
+                    },
+                    onComplete: () => {
+                        this.angle = -20; 
+                        this.isSwinging = false;
+                    }
+                });
+            }
+        }
+
+        class Mole extends Phaser.GameObjects.Container {
+            constructor(scene, x, y) {
+                super(scene, x, y);
+                this.baseY = y;
+                this.popY = y - 35; 
+                this.isActive = false;
+                this.isEquationCorrect = false;
+                
+                this.y = this.baseY + 160; 
+
+                let body = scene.add.graphics();
+                body.fillStyle(0x8D6E63, 1);
+                body.fillRoundedRect(-30, -30, 60, 80, 30); 
+                
+                let snout = scene.add.graphics();
+                snout.fillStyle(0xD7CCC8, 1);
+                snout.fillEllipse(0, -5, 30, 20);
+                
+                let nose = scene.add.graphics();
+                nose.fillStyle(0x000000, 1);
+                nose.fillEllipse(0, -12, 10, 7);
+                
+                this.leftEye = scene.add.graphics();
+                this.rightEye = scene.add.graphics();
+                this.mouth = scene.add.graphics();
+                
+                this.bubble = scene.add.graphics();
+                this.bubble.fillStyle(0xFFFFFF, 0.95);
+                this.bubble.lineStyle(2, 0x000000);
+                this.bubble.fillRoundedRect(-55, -100, 110, 60, 10);
+                this.bubble.strokeRoundedRect(-55, -100, 110, 60, 10);
+                this.bubble.fillTriangle(-8, -42, 8, -42, -10, -32);
+                this.bubble.strokeTriangle(-8, -42, 8, -42, -10, -32);
+
+                this.answerText = scene.add.text(0, -70, '', { font: 'bold 13px "Arial Black", Arial', fill: '#000', align: 'center' }).setOrigin(0.5);
+
+                this.add([body, snout, nose, this.leftEye, this.rightEye, this.mouth, this.bubble, this.answerText]);
+                
+                let maskRect = scene.make.graphics();
+                maskRect.fillStyle(0xffffff);
+                maskRect.fillRect(x - 150, y - 200, 300, 200); 
+                let mask = maskRect.createGeometryMask();
+                this.setMask(mask);
+                
+                scene.add.existing(this);
+                this.setHappy();
+                
+                this.setSize(110, 140); 
+                this.setDepth(10);
+            }
+            
+            drawFace(mode) {
+                this.leftEye.clear();
+                this.rightEye.clear();
+                this.mouth.clear();
+                
+                this.leftEye.fillStyle(0xFFFFFF, 1);
+                this.leftEye.fillCircle(-12, -20, 7);
+                this.rightEye.fillStyle(0xFFFFFF, 1);
+                this.rightEye.fillCircle(12, -20, 7);
+                
+                if (mode === 'happy') {
+                    this.leftEye.fillStyle(0x000000, 1);
+                    this.leftEye.fillCircle(-12, -20, 3);
+                    this.rightEye.fillStyle(0x000000, 1);
+                    this.rightEye.fillCircle(12, -20, 3);
+                    
+                    this.mouth.lineStyle(2, 0x000000);
+                    this.mouth.beginPath();
+                    this.mouth.arc(0, -10, 8, 0.2, Math.PI - 0.2, false);
+                    this.mouth.strokePath();
+                } else if (mode === 'sad') {
+                    this.leftEye.lineStyle(2, 0x000000);
+                    this.leftEye.beginPath();
+                    this.leftEye.moveTo(-17, -23); this.leftEye.lineTo(-7, -17);
+                    this.leftEye.moveTo(-17, -17); this.leftEye.lineTo(-7, -23);
+                    this.leftEye.strokePath();
+                    
+                    this.rightEye.lineStyle(2, 0x000000);
+                    this.rightEye.beginPath();
+                    this.rightEye.moveTo(7, -23); this.rightEye.lineTo(17, -17);
+                    this.rightEye.moveTo(7, -17); this.rightEye.lineTo(17, -23);
+                    this.rightEye.strokePath();
+                    
+                    this.mouth.lineStyle(2, 0x000000);
+                    this.mouth.beginPath();
+                    this.mouth.arc(0, 0, 8, Math.PI + 0.5, 2 * Math.PI - 0.5, false);
+                    this.mouth.strokePath();
+                }
+            }
+
+            setHappy() { this.drawFace('happy'); }
+            setSad() { this.drawFace('sad'); }
+            
+            pop(equationObj, duration) {
+                if (this.popTween) this.popTween.stop();
+                this.isActive = true;
+                this.isEquationCorrect = equationObj.isCorrect;
+                this.answerText.setText(equationObj.text);
+                this.setHappy();
+                
+                this.y = this.baseY + 160; 
+                burstSand(this.scene, this.x, this.baseY);
+                SoundEffect.playPop();
+
+                this.popTween = this.scene.tweens.add({
+                    targets: this,
+                    y: this.popY,
+                    duration: 500, 
+                    ease: 'Back.easeOut',
+                    onComplete: () => {
+                        this.hideTimer = this.scene.time.delayedCall(duration, () => {
+                            if (this.isActive) this.hide();
+                        });
+                    }
+                });
+            }
+            
+            hide() {
+                if(!this.isActive) return;
+                this.isActive = false;
+                if(this.hideTimer) this.hideTimer.remove();
+                if(this.popTween) this.popTween.stop();
+
+                this.scene.tweens.add({
+                    targets: this,
+                    y: this.baseY + 160,
+                    duration: 400, 
+                    ease: 'Quad.easeIn'
+                });
+            }
+            
+            hit() {
+                if (!this.isActive) return;
+                this.isActive = false;
+                if(this.hideTimer) this.hideTimer.remove();
+                if(this.popTween) this.popTween.stop();
+                
+                this.setSad();
+                burstSand(this.scene, this.x, this.baseY);
+
+                // Wait 1 second so the student can see the sad expression
+                this.scene.time.delayedCall(1000, () => {
+                    this.scene.tweens.add({
+                        targets: this,
+                        y: this.baseY + 160,
+                        scaleY: 0.6,
+                        scaleX: 1.1,
+                        duration: 300, // Faster retreat after the pause
+                        ease: 'Quad.easeIn',
+                        onComplete: () => {
+                            this.scaleX = 1; 
+                            this.scaleY = 1;
+                        }
+                    });
+                });
+            }
+        }
+
+        // --- Scenes ---
+
+        class BootScene extends Phaser.Scene {
+            constructor() {
+                super('BootScene');
+            }
+            create() {
+                this.scene.start('LevelSelectScene');
+            }
+        }
+
+        class LevelSelectScene extends Phaser.Scene {
+            constructor() {
+                super('LevelSelectScene');
+            }
+            
+            create() {
+                drawDesertBackground(this);
+                this.input.setDefaultCursor('default');
+                
+                let bg = this.add.graphics();
+                bg.setDepth(5); bg.fillStyle(0x000000, 0.4); bg.fillRect(0, 0, 800, 600);
+
+                let board = this.add.graphics();
+                board.setDepth(5); board.fillStyle(0x8B4513, 1); board.fillRoundedRect(100, 50, 600, 500, 20); 
+                board.fillStyle(0xA0522D, 1); board.fillRoundedRect(110, 60, 580, 480, 15);
+                
+                this.add.text(400, 110, "Powers of 10 Math", { font: 'bold 42px "Arial Black", Arial', fill: '#FFD700', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5).setDepth(6);
+                
+                let rules = "HOW TO PLAY:\n1. Choose a difficulty level.\n2. Moles pop up with math equations.\n3. Smash moles with CORRECT equations!\n4. +10 points for correct, -5 for wrong.\n5. Score combos for perfect hits!";
+                this.add.text(400, 230, rules, { font: 'bold 18px Arial', fill: '#FFF', align: 'center', lineSpacing: 10 }).setOrigin(0.5).setDepth(6);
+                
+                this.add.text(400, 350, "Select Difficulty:", { font: 'bold 24px Arial', fill: '#FFD700' }).setOrigin(0.5).setDepth(6);
+
+                this.createButton(250, 430, "Easy", 0x4CAF50, 0x66BB6A, () => {
+                    this.scene.start('GameScene', { level: 'easy' });
+                });
+                
+                this.createButton(400, 430, "Medium", 0xFF9800, 0xFFB74D, () => {
+                    this.scene.start('GameScene', { level: 'medium' });
+                });
+
+                this.createButton(550, 430, "Hard", 0xF44336, 0xEF5350, () => {
+                    this.scene.start('GameScene', { level: 'hard' });
+                });
+                
+                this.input.on('pointerdown', () => { SoundEffect.init(); });
+            }
+
+            createButton(x, y, text, color, hoverColor, onClick) {
+                let btn = this.add.graphics();
+                btn.setDepth(6); btn.fillStyle(color, 1); btn.fillRoundedRect(x - 60, y - 25, 120, 50, 10);
+                this.add.text(x, y, text, { font: 'bold 20px Arial', fill: '#FFF' }).setOrigin(0.5).setDepth(7);
+                let zone = this.add.zone(x, y, 120, 50).setInteractive({ cursor: 'pointer' });
+                zone.on('pointerdown', onClick);
+                zone.on('pointerover', () => {
+                    btn.clear(); btn.fillStyle(hoverColor, 1); btn.fillRoundedRect(x - 60, y - 25, 120, 50, 10);
+                });
+                zone.on('pointerout', () => {
+                    btn.clear(); btn.fillStyle(color, 1); btn.fillRoundedRect(x - 60, y - 25, 120, 50, 10);
+                });
+            }
+        }
+
+        class GameScene extends Phaser.Scene {
+            constructor() {
+                super('GameScene');
+            }
+            
+            init(data) {
+                this.level = data.level || 'easy';
+            }
+
+            create() {
+                this.score = 0;
+                this.timeLeft = 60;
+                this.moles = [];
+                this.comboCount = 0;
+                
+                this.input.setDefaultCursor('none');
+
+                drawDesertBackground(this);
+                this.drawUI();
+                
+                let bgHoles = this.add.graphics();
+                bgHoles.setDepth(1);
+                
+                for(let row=0; row<3; row++) {
+                    for(let col=0; col<3; col++) {
+                        let hx = 100 + col * 300; 
+                        let hy = 320 + row * 100;
+                        if (row === 1) hx += 150;
+                        if (row === 1 && col === 2) continue; 
+                        
+                        bgHoles.fillStyle(0x3E2723, 1);
+                        bgHoles.fillEllipse(hx, hy, 100, 35); 
+                        
+                        let mole = new Mole(this, hx, hy);
+                        this.moles.push(mole);
+                    }
+                }
+                
+                this.hammer = new Hammer(this);
+                this.isHammerActive = true;
+
+                this.input.on('pointermove', (pointer) => {
+                    if (this.isHammerActive) {
+                        this.hammer.x = pointer.x; 
+                        this.hammer.y = pointer.y;
+                    }
+                });
+                
+                this.input.on('pointerdown', (pointer) => {
+                    if (this.isHammerActive) this.hammer.swing();
+                    
+                    let hitSomething = false;
+                    let sortedMoles = [...this.moles].sort((a,b) => b.y - a.y);
+                    
+                    for (const mole of sortedMoles) {
+                        if (!mole.isActive) continue;
+                        let bounds = new Phaser.Geom.Rectangle(mole.x - 55, mole.y - 125, 110, 140);
+                        if (Phaser.Geom.Rectangle.Contains(bounds, pointer.x, pointer.y)) {
+                            this.checkHit(mole);
+                            hitSomething = true;
+                            break;
+                        }
+                    }
+                });
+                
+                this.time.addEvent({
+                    delay: 1000,
+                    callback: () => {
+                        this.timeLeft--;
+                        this.timeText.setText(this.timeLeft.toString());
+                        if(this.timeLeft <= 0) {
+                            this.scene.start('GameOverScene', { score: this.score });
+                        }
+                    },
+                    callbackScope: this, loop: true
+                });
+                
+                this.queueSpawn();
+            }
+            
+            drawUI() {
+                let ui = this.add.graphics();
+                ui.setDepth(20);
+                
+                ui.fillStyle(0x8B4513, 1); ui.fillRoundedRect(20, 20, 100, 60, 10);
+                ui.fillStyle(0xA0522D, 1); ui.fillRoundedRect(25, 25, 90, 50, 8);
+                this.add.text(70, 40, 'SCORE', { font: 'bold 12px Arial', fill: '#FFD700' }).setOrigin(0.5).setDepth(21);
+                this.scoreText = this.add.text(70, 60, '0', { font: 'bold 22px Arial', fill: '#FFF' }).setOrigin(0.5).setDepth(21);
+
+                ui.fillStyle(0x8B4513, 1); ui.fillRoundedRect(680, 20, 100, 60, 10);
+                ui.fillStyle(0xA0522D, 1); ui.fillRoundedRect(685, 25, 90, 50, 8);
+                this.add.text(730, 40, 'TIME', { font: 'bold 12px Arial', fill: '#FFD700' }).setOrigin(0.5).setDepth(21);
+                this.timeText = this.add.text(730, 60, '60', { font: 'bold 22px Arial', fill: '#FFF' }).setOrigin(0.5).setDepth(21);
+                
+                ui.fillStyle(0x795548, 1); ui.fillRect(392, 0, 16, 140); 
+                ui.fillStyle(0x8D6E63, 1); ui.fillRoundedRect(260, 20, 280, 80, 10);
+                ui.fillStyle(0x795548, 1); ui.fillRoundedRect(265, 25, 270, 70, 5);
+                this.add.text(400, 45, "Smash moles for scoring:", { font: 'bold 15px Arial', fill: '#FFF' }).setOrigin(0.5).setDepth(21);
+                this.add.text(400, 75, "Points", { font: 'bold 28px "Arial Black"', fill: '#FFF' }).setOrigin(0.5).setDepth(21);
+
+                this.createSmallButton(750, 570, "Home", 0x3F51B5, () => this.scene.start('LevelSelectScene'));
+                this.createSmallButton(680, 570, "Reset", 0xFF5722, () => this.scene.restart());
+            }
+
+            createSmallButton(x, y, text, color, onClick) {
+                let btn = this.add.graphics();
+                btn.setDepth(150);
+                btn.fillStyle(color, 1);
+                btn.fillRoundedRect(x - 30, y - 15, 60, 30, 8);
+                let btnText = this.add.text(x, y, text, { font: 'bold 12px Arial', fill: '#FFF' }).setOrigin(0.5).setDepth(151);
+                let zone = this.add.zone(x, y, 80, 50).setInteractive({ cursor: 'pointer' }); // Slightly larger zone
+                
+                zone.on('pointerover', () => {
+                    this.isHammerActive = false;
+                    this.hammer.setVisible(false);
+                    this.input.setDefaultCursor('pointer');
+                });
+                zone.on('pointerout', () => {
+                    this.isHammerActive = true;
+                    this.hammer.setVisible(true);
+                    this.input.setDefaultCursor('none');
+                });
+                zone.on('pointerdown', onClick);
+            }
+            
+            queueSpawn() {
+                let spawnDelay = Phaser.Math.Between(1500, 3000); 
+                if (this.level === 'hard') spawnDelay *= 0.8;
+                this.time.delayedCall(spawnDelay, () => {
+                    if(this.timeLeft > 0) { this.spawnMole(); this.queueSpawn(); }
+                });
+            }
+            
+            spawnMole() {
+                let inactiveMoles = this.moles.filter(m => !m.isActive);
+                if (inactiveMoles.length === 0) return;
+                let mole = Phaser.Utils.Array.GetRandom(inactiveMoles);
+                let equationObj = generatePowerOf10Equation(this.level);
+                mole.pop(equationObj, Phaser.Math.Between(3000, 5000));
+            }
+            
+            checkHit(mole) {
+                mole.hit(); // Always retreat and set sad expression
+                if (mole.isEquationCorrect) {
+                    this.score += 10;
+                    this.comboCount++;
+                    this.scoreText.setText(this.score.toString());
+                    showFloatingText(this, mole.x, mole.y - 120, "+10", "#4CAF50");
+                    SoundEffect.playCorrect();
+                    if (window.navigator.vibrate) window.navigator.vibrate(50);
+                    
+                    if (this.comboCount === 3) showComboText(this, 400, 300, "Great!");
+                    else if (this.comboCount === 5) showComboText(this, 400, 300, "Pro!");
+                    else if (this.comboCount === 10) showComboText(this, 400, 300, "Legendary!");
+                } else {
+                    this.score -= 5;
+                    this.comboCount = 0;
+                    this.scoreText.setText(this.score.toString());
+                    showFloatingText(this, mole.x, mole.y - 120, "-5", "#F44336");
+                    showCrossSign(this, mole.x, mole.y - 30);
+                    SoundEffect.playWrong();
+                    if (window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
+                }
+            }
+        }
+
+        class GameOverScene extends Phaser.Scene {
+            constructor() { super('GameOverScene'); }
+            init(data) { this.finalScore = data.score || 0; }
+            create() {
+                drawDesertBackground(this);
+                this.input.setDefaultCursor('default'); 
+                
+                let bg = this.add.graphics();
+                bg.setDepth(5); bg.fillStyle(0x000000, 0.4); bg.fillRect(0, 0, 800, 600);
+                
+                let board = this.add.graphics();
+                board.setDepth(5); board.fillStyle(0x8B4513, 1); board.fillRoundedRect(200, 150, 400, 300, 20);
+                board.fillStyle(0xA0522D, 1); board.fillRoundedRect(210, 160, 380, 280, 15);
+                
+                this.add.text(400, 220, "Time's Up!", { font: 'bold 48px Arial', fill: '#FFD700', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(6);
+                this.add.text(400, 300, `Final Score: ${this.finalScore}`, { font: 'bold 36px Arial', fill: '#FFF' }).setOrigin(0.5).setDepth(6);
+                
+                let btn = this.add.graphics();
+                btn.setDepth(6); btn.fillStyle(0x4CAF50, 1); btn.fillRoundedRect(300, 360, 200, 60, 15);
+                this.add.text(400, 390, "Play Again", { font: 'bold 28px Arial', fill: '#FFF' }).setOrigin(0.5).setDepth(7);
+                let zone = this.add.zone(400, 390, 200, 60).setInteractive({ cursor: 'pointer' });
+                zone.on('pointerdown', () => this.scene.start('LevelSelectScene'));
+            }
+        }
+
+        const config = {
+            type: Phaser.AUTO, width: 800, height: 600, parent: 'game-container', backgroundColor: '#87CEEB',
+            scene: [BootScene, LevelSelectScene, GameScene, GameOverScene]
+        };
+        const game = new Phaser.Game(config);
+    </script>
+</body>
+</html>
