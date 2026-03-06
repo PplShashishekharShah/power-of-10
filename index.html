@@ -574,7 +574,7 @@ class GameScene extends Phaser.Scene {
             if (!this.isHammerActive||this.gameOver) return;
             this.hammer.swing();
             for (let mole of [...this.moles].sort((a,b)=>b.y-a.y)) {
-                if (mole.isActive&&!mole.wasHit&&Phaser.Geom.Rectangle.Contains(new Phaser.Geom.Rectangle(mole.x-55,mole.y-125,110,140),ptr.x,ptr.y)) {
+                if (mole.isActive&&!mole.wasHit&&Phaser.Geom.Rectangle.Contains(new Phaser.Geom.Rectangle(mole.x-75,mole.y-145,150,170),ptr.x,ptr.y)) {
                     this.checkHit(mole); break;
                 }
             }
