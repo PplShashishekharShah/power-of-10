@@ -55,13 +55,16 @@ function drawDesertBackground(scene) {
     scene.moon = scene.add.graphics(); scene.moon.fillStyle(0xDFE6E9,1); scene.moon.fillCircle(0,0,45); scene.moon.setAlpha(0); scene.celestial.add(scene.moon);
 
     let env = scene.add.graphics().setDepth(0.3);
-    env.fillStyle(0x8B4513,1); env.fillTriangle(100,300,300,300,200,100);
-    env.fillStyle(0xA0522D,1); env.fillTriangle(400,300,700,300,550,50);
-    env.fillStyle(0xCD853F,1); env.fillTriangle(600,300,900,300,750,150);
-    env.fillStyle(0xF4A460,1); env.fillRoundedRect(-50,200,900,450,50);
+    // Mountains shifted down 25px from original
+    env.fillStyle(0x8B4513,1); env.fillTriangle(100,325,300,325,200,125);
+    env.fillStyle(0xA0522D,1); env.fillTriangle(400,325,700,325,550,75);
+    env.fillStyle(0xCD853F,1); env.fillTriangle(600,325,900,325,750,175);
+    // Ground shifted down 25px: y=200 -> y=225
+    env.fillStyle(0xF4A460,1); env.fillRoundedRect(-50,225,900,425,50);
     env.fillStyle(0x2E8B57,1);
-    env.fillRoundedRect(50,150,20,60,10); env.fillRoundedRect(35,170,50,10,5);
-    env.fillRoundedRect(720,180,20,50,8); env.fillRoundedRect(710,200,40,8,4);
+    // Cacti shifted down 25px
+    env.fillRoundedRect(50,172,20,60,10); env.fillRoundedRect(35,192,50,10,5);
+    env.fillRoundedRect(720,202,20,50,8); env.fillRoundedRect(710,222,40,8,4);
 
     createCloud(scene, 100, 80); createCloud(scene, 500, 60);
     for (let i=0; i<3; i++) createBird(scene);
