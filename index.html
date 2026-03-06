@@ -21,7 +21,7 @@ const TARGET_SCORES = { easy: 50, medium: 80, hard: 120 };
 const SoundEffect = {
     audioCtx: null,
     init() { if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); },
-    _play(type, freq1, freq2, duration, waveform='sine') {
+    _play(freq1, freq2, duration, waveform='sine') {
         this.init();
         const osc = this.audioCtx.createOscillator(), gain = this.audioCtx.createGain();
         osc.type = waveform;
@@ -32,15 +32,10 @@ const SoundEffect = {
         osc.connect(gain); gain.connect(this.audioCtx.destination);
         osc.start(); osc.stop(this.audioCtx.currentTime + duration);
     },
-    playCorrect() { this._play('correct', 440, 880, 0.3); },
-    playWrong()   { this._play('wrong', 110, 55, 0.4, 'sawtooth'); },
-    playPop()     { this._play('pop', 200, 600, 0.1); },
-    playWin()     {
-        this.init();
-        [523, 659, 784, 1047].forEach((f, i) => {
-            setTimeout(() => this._play('win', f, f * 1.1, 0.3), i * 120);
-        });
-    }
+    playCorrect() { this._play(440, 880, 0.3); },
+    playWrong()   { this._play(110, 55, 0.4, 'sawtooth'); },
+    playPop()     { this._play(200, 600, 0.1); },
+    playWin()     { [523,659,784,1047].forEach((f,i) => setTimeout(()=>this._play(f,f*1.1,0.3),i*120)); }
 };
 
 // ─── BACKGROUND ─────────────────────────────────────────
@@ -52,7 +47,7 @@ function drawDesertBackground(scene) {
 
     scene.stars = scene.add.graphics().setDepth(0.1);
     scene.stars.fillStyle(0xFFFFFF, 1);
-    for (let i = 0; i < 40; i++) scene.stars.fillCircle(Phaser.Math.Between(0,800), Phaser.Math.Between(0,250), Phaser.Math.Between(1,2));
+    for (let i=0; i<40; i++) scene.stars.fillCircle(Phaser.Math.Between(0,800), Phaser.Math.Between(0,250), Phaser.Math.Between(1,2));
     scene.stars.setAlpha(0);
 
     scene.celestial = scene.add.container(700, 100).setDepth(0.2);
@@ -69,174 +64,128 @@ function drawDesertBackground(scene) {
     env.fillRoundedRect(720,180,20,50,8); env.fillRoundedRect(710,200,40,8,4);
 
     createCloud(scene, 100, 80); createCloud(scene, 500, 60);
-    for (let i = 0; i < 3; i++) createBird(scene);
+    for (let i=0; i<3; i++) createBird(scene);
 }
 
 function createBird(scene) {
     let bird = scene.add.graphics().setDepth(2);
-    bird.lineStyle(2, 0x000000);
-    bird.beginPath(); bird.moveTo(-10,0); bird.lineTo(0,5); bird.lineTo(10,0); bird.strokePath();
+    bird.lineStyle(2, 0x000000); bird.beginPath(); bird.moveTo(-10,0); bird.lineTo(0,5); bird.lineTo(10,0); bird.strokePath();
     let x = Phaser.Math.Between(0,800), y = Phaser.Math.Between(50,150);
     bird.setPosition(x, y);
-    scene.tweens.add({ targets: bird, x: x+200, y: y+Phaser.Math.Between(-20,20), duration: 5000+Math.random()*3000, repeat: -1, yoyo: true, ease: 'Sine.easeInOut' });
-    scene.time.addEvent({ delay: 200, loop: true, callback: () => { bird.scaleY = bird.scaleY===1 ? -0.5 : 1; } });
+    scene.tweens.add({ targets: bird, x:x+200, y:y+Phaser.Math.Between(-20,20), duration:5000+Math.random()*3000, repeat:-1, yoyo:true, ease:'Sine.easeInOut' });
+    scene.time.addEvent({ delay:200, loop:true, callback:()=>{ bird.scaleY = bird.scaleY===1 ? -0.5 : 1; } });
 }
 
 function createCloud(scene, x, y) {
-    let cloud = scene.add.graphics({ x, y }).setDepth(0.4);
-    cloud.fillStyle(0xFFFFFF, 0.8);
-    cloud.fillCircle(0,0,30); cloud.fillCircle(30,-10,40); cloud.fillCircle(60,0,30);
-    cloud.fillRoundedRect(-10,0,80,30,15);
-    scene.tweens.add({ targets: cloud, x: x+100, duration: 10000+Math.random()*5000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    let c = scene.add.graphics({x,y}).setDepth(0.4);
+    c.fillStyle(0xFFFFFF,0.8); c.fillCircle(0,0,30); c.fillCircle(30,-10,40); c.fillCircle(60,0,30); c.fillRoundedRect(-10,0,80,30,15);
+    scene.tweens.add({ targets:c, x:x+100, duration:10000+Math.random()*5000, yoyo:true, repeat:-1, ease:'Sine.easeInOut' });
 }
 
 // ─── HELPERS ────────────────────────────────────────────
 function burstSand(scene, x, y) {
-    for (let i = 0; i < 8; i++) {
-        let p = scene.add.graphics({x,y}).setDepth(5);
-        p.fillStyle(0xF4A460,1); p.fillCircle(0,0,4+Math.random()*3);
-        let a = Math.random()*Math.PI, d = 30+Math.random()*50;
-        scene.tweens.add({ targets: p, x: x+Math.cos(a)*d, y: y-Math.sin(a)*d+40, alpha:0, duration: 400+Math.random()*200, ease:'Quad.easeOut', onComplete:()=>p.destroy() });
+    for (let i=0; i<8; i++) {
+        let p = scene.add.graphics({x,y}).setDepth(5); p.fillStyle(0xF4A460,1); p.fillCircle(0,0,4+Math.random()*3);
+        let a=Math.random()*Math.PI, d=30+Math.random()*50;
+        scene.tweens.add({ targets:p, x:x+Math.cos(a)*d, y:y-Math.sin(a)*d+40, alpha:0, duration:400+Math.random()*200, ease:'Quad.easeOut', onComplete:()=>p.destroy() });
     }
 }
 
 function showFloatingText(scene, x, y, msg, color) {
-    let t = scene.add.text(x, y, msg, { font:'bold 32px Arial', fill:color, stroke:'#fff', strokeThickness:4 }).setOrigin(0.5).setDepth(60);
-    scene.tweens.add({ targets: t, y: y-80, alpha:0, duration:1000, ease:'Cubic.easeOut', onComplete:()=>t.destroy() });
+    let t = scene.add.text(x,y,msg,{font:'bold 32px Arial',fill:color,stroke:'#fff',strokeThickness:4}).setOrigin(0.5).setDepth(60);
+    scene.tweens.add({ targets:t, y:y-80, alpha:0, duration:1000, ease:'Cubic.easeOut', onComplete:()=>t.destroy() });
 }
 
 function showComboText(scene, msg) {
-    let container = scene.add.container(400, 185).setDepth(200);
-    let bg = scene.add.graphics();
-    bg.fillStyle(0x27AE60, 0.92); bg.fillRoundedRect(-120,-24,240,48,12);
-    bg.lineStyle(3,0xFFFFFF,0.9); bg.strokeRoundedRect(-120,-24,240,48,12);
+    let c = scene.add.container(400,185).setDepth(200);
+    let bg = scene.add.graphics(); bg.fillStyle(0x27AE60,0.92); bg.fillRoundedRect(-120,-24,240,48,12); bg.lineStyle(3,0xFFFFFF,0.9); bg.strokeRoundedRect(-120,-24,240,48,12);
     let t = scene.add.text(0,0,msg,{font:'bold 22px Arial',fill:'#FFF',stroke:'#000',strokeThickness:3}).setOrigin(0.5);
-    container.add([bg,t]); container.setScale(0);
-    scene.tweens.add({ targets: container, scale:1, duration:350, ease:'Back.easeOut' });
-    scene.tweens.add({ targets: container, y:135, alpha:{from:1,to:0}, delay:1400, duration:600, onComplete:()=>container.destroy() });
+    c.add([bg,t]); c.setScale(0);
+    scene.tweens.add({ targets:c, scale:1, duration:350, ease:'Back.easeOut' });
+    scene.tweens.add({ targets:c, y:135, alpha:{from:1,to:0}, delay:1400, duration:600, onComplete:()=>c.destroy() });
 }
 
-// Enhanced feedback - full-screen flash
 function showCorrectFeedback(scene, x, y) {
     let flash = scene.add.graphics().setDepth(180).setAlpha(0);
-    flash.fillStyle(0x00E676, 0.18); flash.fillRect(0,0,800,600);
-    scene.tweens.add({ targets: flash, alpha:1, duration:80, yoyo:true, repeat:1, onComplete:()=>flash.destroy() });
-
-    // Big checkmark
-    let check = scene.add.text(x, y-40, '✓', { font:'bold 80px Arial', fill:'#00E676', stroke:'#fff', strokeThickness:4 }).setOrigin(0.5).setDepth(70).setScale(0);
-    scene.tweens.add({ targets: check, scale:1, duration:200, ease:'Back.easeOut' });
-    scene.tweens.add({ targets: check, y: y-120, alpha:0, delay:500, duration:500, onComplete:()=>check.destroy() });
+    flash.fillStyle(0x00E676,0.18); flash.fillRect(0,0,800,600);
+    scene.tweens.add({ targets:flash, alpha:1, duration:80, yoyo:true, repeat:1, onComplete:()=>flash.destroy() });
+    let check = scene.add.text(x,y-40,'✓',{font:'bold 80px Arial',fill:'#00E676',stroke:'#fff',strokeThickness:4}).setOrigin(0.5).setDepth(70).setScale(0);
+    scene.tweens.add({ targets:check, scale:1, duration:200, ease:'Back.easeOut' });
+    scene.tweens.add({ targets:check, y:y-120, alpha:0, delay:500, duration:500, onComplete:()=>check.destroy() });
     showFloatingText(scene, x, y-80, '+10', '#00E676');
 }
 
 function showIncorrectFeedback(scene, x, y) {
     let flash = scene.add.graphics().setDepth(180).setAlpha(0);
-    flash.fillStyle(0xFF1744, 0.2); flash.fillRect(0,0,800,600);
-    scene.tweens.add({ targets: flash, alpha:1, duration:80, yoyo:true, repeat:1, onComplete:()=>flash.destroy() });
-
-    // Camera shake
+    flash.fillStyle(0xFF1744,0.2); flash.fillRect(0,0,800,600);
+    scene.tweens.add({ targets:flash, alpha:1, duration:80, yoyo:true, repeat:1, onComplete:()=>flash.destroy() });
     scene.cameras.main.shake(250, 0.007);
-
-    // Big X
-    let cross = scene.add.text(x, y-40, '✗', { font:'bold 80px Arial', fill:'#FF1744', stroke:'#fff', strokeThickness:4 }).setOrigin(0.5).setDepth(70).setScale(0);
-    scene.tweens.add({ targets: cross, scale:1, duration:200, ease:'Back.easeOut' });
-    scene.tweens.add({ targets: cross, y: y-120, alpha:0, delay:500, duration:500, onComplete:()=>cross.destroy() });
+    let cross = scene.add.text(x,y-40,'✗',{font:'bold 80px Arial',fill:'#FF1744',stroke:'#fff',strokeThickness:4}).setOrigin(0.5).setDepth(70).setScale(0);
+    scene.tweens.add({ targets:cross, scale:1, duration:200, ease:'Back.easeOut' });
+    scene.tweens.add({ targets:cross, y:y-120, alpha:0, delay:500, duration:500, onComplete:()=>cross.destroy() });
     showFloatingText(scene, x, y-80, 'Wrong!', '#FF1744');
 }
 
 // ─── MATH GEN ───────────────────────────────────────────
 function generatePowerOf10Equation(level) {
     let multiplicand, multiplier, correctAnswer;
-    if (level === 'easy') {
-        multiplicand = Phaser.Math.Between(1, 99);
-        multiplier = Math.random() < 0.5 ? 10 : 100;
-        correctAnswer = multiplicand * multiplier;
-    } else if (level === 'medium') {
-        if (Math.random() > 0.5) {
-            multiplicand = (Phaser.Math.Between(10,99)/10).toFixed(1);
-            multiplier = Math.random() < 0.5 ? 10 : 100;
-            correctAnswer = (Number(multiplicand)*multiplier).toFixed(1).replace(/\.0$/,'');
-        } else {
-            multiplicand = Phaser.Math.Between(10,990);
-            multiplier = Math.random() < 0.5 ? 10 : 100;
-            correctAnswer = multiplicand * multiplier;
-        }
-    } else {
-        let d = Phaser.Math.Between(1,3);
-        multiplicand = (Phaser.Math.Between(1,999)/Math.pow(10,d)).toFixed(d);
-        multiplier = Math.random() < 0.5 ? 100 : 1000;
-        correctAnswer = parseFloat((Number(multiplicand)*multiplier).toPrecision(12)).toString();
-    }
-    let isCorrect = Math.random() < 0.5;
-    let displayAnswer = correctAnswer;
+    if (level==='easy') { multiplicand=Phaser.Math.Between(1,99); multiplier=Math.random()<0.5?10:100; correctAnswer=multiplicand*multiplier; }
+    else if (level==='medium') {
+        if (Math.random()>0.5) { multiplicand=(Phaser.Math.Between(10,99)/10).toFixed(1); multiplier=Math.random()<0.5?10:100; correctAnswer=(Number(multiplicand)*multiplier).toFixed(1).replace(/\.0$/,''); }
+        else { multiplicand=Phaser.Math.Between(10,990); multiplier=Math.random()<0.5?10:100; correctAnswer=multiplicand*multiplier; }
+    } else { let d=Phaser.Math.Between(1,3); multiplicand=(Phaser.Math.Between(1,999)/Math.pow(10,d)).toFixed(d); multiplier=Math.random()<0.5?100:1000; correctAnswer=parseFloat((Number(multiplicand)*multiplier).toPrecision(12)).toString(); }
+    let isCorrect=Math.random()<0.5, displayAnswer=correctAnswer;
     if (!isCorrect) {
-        let e = Phaser.Math.Between(0,2);
-        if (e===0) displayAnswer = (Number(correctAnswer)*10).toString();
-        else if (e===1) displayAnswer = (Number(correctAnswer)/10).toString();
-        else {
-            let v = Number(correctAnswer); v += v>=100 ? 10 : (v>10 ? 1 : 0.1);
-            displayAnswer = parseFloat(v.toPrecision(12)).toString();
-        }
-        if (displayAnswer === correctAnswer) displayAnswer = (Number(correctAnswer)+10).toString();
+        let e=Phaser.Math.Between(0,2);
+        if (e===0) displayAnswer=(Number(correctAnswer)*10).toString();
+        else if (e===1) displayAnswer=(Number(correctAnswer)/10).toString();
+        else { let v=Number(correctAnswer); v+=v>=100?10:(v>10?1:0.1); displayAnswer=parseFloat(v.toPrecision(12)).toString(); }
+        if (displayAnswer===correctAnswer) displayAnswer=(Number(correctAnswer)+10).toString();
     }
-    return { text: `${multiplicand} x ${multiplier}\n= ${displayAnswer}`, isCorrect };
+    return { text:`${multiplicand} x ${multiplier}\n= ${displayAnswer}`, isCorrect };
 }
 
 // ─── HAMMER ─────────────────────────────────────────────
 class Hammer extends Phaser.GameObjects.Container {
     constructor(scene) {
-        super(scene, 0, 0);
-        this.setScale(0.7); this.angle = -20;
-        let handle = scene.add.graphics(); handle.fillStyle(0x8B4513,1); handle.fillRoundedRect(-10,-50,20,80,5);
-        let head = scene.add.graphics(); head.fillStyle(0x607D8B,1); head.fillRoundedRect(-40,-70,80,40,10);
-        let h1 = scene.add.graphics(); h1.fillStyle(0x455A64,1); h1.fillRoundedRect(-45,-65,10,30,5);
-        let h2 = scene.add.graphics(); h2.fillStyle(0x455A64,1); h2.fillRoundedRect(35,-65,10,30,5);
-        this.add([handle, head, h1, h2]);
-        this.setDepth(100); scene.add.existing(this); this.isSwinging = false;
+        super(scene,0,0); this.setScale(0.7); this.angle=-20;
+        let handle=scene.add.graphics(); handle.fillStyle(0x8B4513,1); handle.fillRoundedRect(-10,-50,20,80,5);
+        let head=scene.add.graphics(); head.fillStyle(0x607D8B,1); head.fillRoundedRect(-40,-70,80,40,10);
+        let h1=scene.add.graphics(); h1.fillStyle(0x455A64,1); h1.fillRoundedRect(-45,-65,10,30,5);
+        let h2=scene.add.graphics(); h2.fillStyle(0x455A64,1); h2.fillRoundedRect(35,-65,10,30,5);
+        this.add([handle,head,h1,h2]); this.setDepth(100); scene.add.existing(this); this.isSwinging=false;
     }
     swing() {
-        if (this.isSwinging) return; this.isSwinging = true;
-        this.scene.tweens.add({
-            targets: this, angle: 45, duration: 60, yoyo: true, ease: 'Sine.easeInOut',
-            onComplete: () => { this.angle = -20; this.isSwinging = false; }
-        });
+        if (this.isSwinging) return; this.isSwinging=true;
+        this.scene.tweens.add({ targets:this, angle:45, duration:60, yoyo:true, ease:'Sine.easeInOut', onComplete:()=>{ this.angle=-20; this.isSwinging=false; } });
     }
 }
 
 // ─── MOLE ───────────────────────────────────────────────
 class Mole extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
-        super(scene, x, y);
-        this.baseY   = y; this.popY = y - 35;
-        this.isActive = false; this.isEquationCorrect = false;
-        this.wasHit   = false;   // ← NEW: prevents re-hitting
-        this.y = this.baseY + 160;
-
-        let body  = scene.add.graphics(); body.fillStyle(0x8D6E63,1); body.fillRoundedRect(-30,-30,60,80,30);
-        let snout = scene.add.graphics(); snout.fillStyle(0xD7CCC8,1); snout.fillEllipse(0,-5,30,20);
-        let nose  = scene.add.graphics(); nose.fillStyle(0x000000,1); nose.fillEllipse(0,-12,10,7);
-        this.leftEye = scene.add.graphics(); this.rightEye = scene.add.graphics(); this.mouth = scene.add.graphics();
-
-        this.bubble = scene.add.graphics();
+        super(scene,x,y);
+        this.baseY=y; this.popY=y-35; this.isActive=false; this.isEquationCorrect=false; this.wasHit=false;
+        this.y=this.baseY+160;
+        let body=scene.add.graphics(); body.fillStyle(0x8D6E63,1); body.fillRoundedRect(-30,-30,60,80,30);
+        let snout=scene.add.graphics(); snout.fillStyle(0xD7CCC8,1); snout.fillEllipse(0,-5,30,20);
+        let nose=scene.add.graphics(); nose.fillStyle(0x000000,1); nose.fillEllipse(0,-12,10,7);
+        this.leftEye=scene.add.graphics(); this.rightEye=scene.add.graphics(); this.mouth=scene.add.graphics();
+        this.bubble=scene.add.graphics();
         this.bubble.fillStyle(0xFFFFFF,0.95); this.bubble.lineStyle(2,0x000000);
         this.bubble.fillRoundedRect(-55,-100,110,60,10); this.bubble.strokeRoundedRect(-55,-100,110,60,10);
         this.bubble.fillTriangle(-8,-42,8,-42,-10,-32); this.bubble.strokeTriangle(-8,-42,8,-42,-10,-32);
-        this.answerText = scene.add.text(0,-70,'',{font:'bold 13px Arial',fill:'#000',align:'center'}).setOrigin(0.5);
-
-        this.add([body, snout, nose, this.leftEye, this.rightEye, this.mouth, this.bubble, this.answerText]);
-
-        let maskRect = scene.make.graphics();
-        maskRect.fillStyle(0xffffff); maskRect.fillRect(x-150, y-200, 300, 200);
+        this.answerText=scene.add.text(0,-70,'',{font:'bold 13px Arial',fill:'#000',align:'center'}).setOrigin(0.5);
+        this.add([body,snout,nose,this.leftEye,this.rightEye,this.mouth,this.bubble,this.answerText]);
+        let maskRect=scene.make.graphics(); maskRect.fillStyle(0xffffff); maskRect.fillRect(x-150,y-200,300,200);
         this.setMask(maskRect.createGeometryMask());
-
-        scene.add.existing(this);
-        this.setHappy(); this.setSize(110,140); this.setDepth(10);
+        scene.add.existing(this); this.setHappy(); this.setSize(110,140); this.setDepth(10);
     }
     drawFace(mode) {
         this.leftEye.clear(); this.rightEye.clear(); this.mouth.clear();
         this.leftEye.fillStyle(0xFFFFFF,1); this.leftEye.fillCircle(-12,-20,7);
         this.rightEye.fillStyle(0xFFFFFF,1); this.rightEye.fillCircle(12,-20,7);
-        if (mode === 'happy') {
+        if (mode==='happy') {
             this.leftEye.fillStyle(0x000000,1); this.leftEye.fillCircle(-12,-20,3);
             this.rightEye.fillStyle(0x000000,1); this.rightEye.fillCircle(12,-20,3);
             this.mouth.lineStyle(2,0x000000); this.mouth.beginPath(); this.mouth.arc(0,-10,8,0.2,Math.PI-0.2,false); this.mouth.strokePath();
@@ -252,421 +201,485 @@ class Mole extends Phaser.GameObjects.Container {
     setSad()   { this.drawFace('sad');   }
     pop(equationObj, duration) {
         if (this.popTween) this.popTween.stop();
-        this.isActive = true; this.wasHit = false;
-        this.isEquationCorrect = equationObj.isCorrect;
+        this.isActive=true; this.wasHit=false; this.isEquationCorrect=equationObj.isCorrect;
         this.answerText.setText(equationObj.text); this.setHappy();
-        this.y = this.baseY + 160; burstSand(this.scene, this.x, this.baseY); SoundEffect.playPop();
-        this.popTween = this.scene.tweens.add({
-            targets: this, y: this.popY, duration: 400, ease: 'Back.easeOut',
-            onComplete: () => { this.hideTimer = this.scene.time.delayedCall(duration, () => { if (this.isActive) this.hide(); }); }
+        this.y=this.baseY+160; burstSand(this.scene,this.x,this.baseY); SoundEffect.playPop();
+        this.popTween=this.scene.tweens.add({ targets:this, y:this.popY, duration:400, ease:'Back.easeOut',
+            onComplete:()=>{ this.hideTimer=this.scene.time.delayedCall(duration,()=>{ if(this.isActive) this.hide(); }); }
         });
     }
     hide() {
-        if (!this.isActive) return;
-        this.isActive = false;
-        if (this.hideTimer) this.hideTimer.remove();
-        if (this.popTween) this.popTween.stop();
-        this.scene.tweens.add({ targets: this, y: this.baseY+160, duration: 350, ease: 'Quad.easeIn' });
+        if (!this.isActive) return; this.isActive=false;
+        if (this.hideTimer) this.hideTimer.remove(); if (this.popTween) this.popTween.stop();
+        this.scene.tweens.add({ targets:this, y:this.baseY+160, duration:350, ease:'Quad.easeIn' });
     }
     hit() {
-        if (!this.isActive || this.wasHit) return;  // ← guard: no re-hits
-        this.wasHit   = true;
-        this.isActive = false;
-        if (this.hideTimer) this.hideTimer.remove();
-        if (this.popTween) this.popTween.stop();
-        this.setSad(); burstSand(this.scene, this.x, this.baseY);
-        // Faster retreat: 600ms delay then quick squish down
-        this.scene.time.delayedCall(600, () => {
-            this.scene.tweens.add({
-                targets: this, y: this.baseY+160, scaleY:0.6, scaleX:1.1, duration:200, ease:'Quad.easeIn',
-                onComplete: () => { this.scaleX=1; this.scaleY=1; this.wasHit=false; }
+        if (!this.isActive||this.wasHit) return; this.wasHit=true; this.isActive=false;
+        if (this.hideTimer) this.hideTimer.remove(); if (this.popTween) this.popTween.stop();
+        this.setSad(); burstSand(this.scene,this.x,this.baseY);
+        this.scene.time.delayedCall(600,()=>{
+            this.scene.tweens.add({ targets:this, y:this.baseY+160, scaleY:0.6, scaleX:1.1, duration:200, ease:'Quad.easeIn',
+                onComplete:()=>{ this.scaleX=1; this.scaleY=1; this.wasHit=false; }
             });
         });
     }
 }
 
-// ─── SCENES ─────────────────────────────────────────────
-class BootScene extends Phaser.Scene {
-    constructor() { super('BootScene'); }
-    create() { this.scene.start('LevelSelectScene'); }
+// ════════════════════════════════════════════════════════
+// SCENE 1 — SPLASH / START PAGE
+// ════════════════════════════════════════════════════════
+class StartScene extends Phaser.Scene {
+    constructor() { super('StartScene'); }
+    create() {
+        this.input.setDefaultCursor('default');
+        drawDesertBackground(this);
+
+        // Decorative floating moles — more visible
+        this._floatingMole(90,  200, 0.55);
+        this._floatingMole(700, 350, 0.50);
+        this._floatingMole(140, 440, 0.48);
+        this._floatingMole(645, 185, 0.52);
+
+        // Centered card panel — with dark border so corners are crisp
+        let panel = this.add.graphics().setDepth(6);
+        panel.lineStyle(4, 0x4A2800, 1);
+        panel.fillStyle(0x8B4513, 1);    panel.fillRoundedRect(220, 170, 360, 280, 24);
+        panel.strokeRoundedRect(220, 170, 360, 280, 24);
+        panel.fillStyle(0xA0522D, 1);    panel.fillRoundedRect(228, 178, 344, 264, 18);
+
+        // Hammer emoji icon instead of paw
+        this.add.text(400, 215, '🔨', { font:'52px Arial' }).setOrigin(0.5).setDepth(7);
+
+        // Title
+        this.add.text(400, 278, 'Powers of 10', {
+            font: 'bold 42px Arial', fill: '#FFD700', stroke: '#000', strokeThickness: 6
+        }).setOrigin(0.5).setDepth(7);
+
+        // Subtitle
+        this.add.text(400, 325, 'Smash the correct equations!', {
+            font: '20px Arial', fill: '#FFF'
+        }).setOrigin(0.5).setDepth(7);
+
+        // Start Game button — wrapped in container so scale pivot is centered
+        let btnX=400, btnY=390;
+        let btnContainer = this.add.container(btnX, btnY).setDepth(8);
+        let btnBg = this.add.graphics(); btnBg.fillStyle(0xFF5722,1); btnBg.fillRoundedRect(-90,-24,180,48,24);
+        let btnLbl = this.add.text(0, 0, 'Start Game', {font:'bold 22px Arial',fill:'#FFF'}).setOrigin(0.5);
+        btnContainer.add([btnBg, btnLbl]);
+
+        let btnZone = this.add.zone(btnX,btnY,180,48).setInteractive({cursor:'pointer'}).setDepth(9);
+        btnZone.on('pointerover',()=>{ btnBg.clear(); btnBg.fillStyle(0xE64A19,1); btnBg.fillRoundedRect(-90,-24,180,48,24); });
+        btnZone.on('pointerout', ()=>{ btnBg.clear(); btnBg.fillStyle(0xFF5722,1); btnBg.fillRoundedRect(-90,-24,180,48,24); });
+        btnZone.on('pointerdown', ()=>{
+            this.tweens.add({ targets:[panel,btnBg,btnLbl], alpha:0, duration:400, onComplete:()=>this.scene.start('TutorialScene') });
+        });
+        // Gentle pulse — container scales from center, no overflow
+        this.tweens.add({ targets:btnContainer, scaleX:1.06, scaleY:1.06, duration:800, yoyo:true, repeat:-1, ease:'Sine.easeInOut' });
+    }
+
+    _floatingMole(x, y, alpha) {
+        let g = this.add.graphics({x,y}).setDepth(1).setAlpha(alpha);
+        g.fillStyle(0x8D6E63,1); g.fillRoundedRect(-22,-22,44,58,20);
+        g.fillStyle(0xD7CCC8,1); g.fillEllipse(0,-3,22,14);
+        g.fillStyle(0x000000,1); g.fillCircle(-7,-10,3); g.fillCircle(7,-10,3); g.fillEllipse(0,-7,7,4);
+        this.tweens.add({ targets:g, y:y-15, duration:2000+Math.random()*1000, yoyo:true, repeat:-1, ease:'Sine.easeInOut' });
+    }
 }
 
-// ─── TUTORIAL SCENE ─────────────────────────────────────
+// ════════════════════════════════════════════════════════
+// SCENE 2 — BOT SIMULATION TUTORIAL
+// ════════════════════════════════════════════════════════
 class TutorialScene extends Phaser.Scene {
     constructor() { super('TutorialScene'); }
+
     create() {
-        drawDesertBackground(this);
         this.input.setDefaultCursor('default');
+        drawDesertBackground(this);
 
-        // Dim overlay
-        let overlay = this.add.graphics().setDepth(5);
-        overlay.fillStyle(0x000000, 0.7); overlay.fillRect(0,0,800,600);
+        // Title bar
+        let titleBar = this.add.graphics().setDepth(20);
+        titleBar.fillStyle(0x8B4513,1); titleBar.fillRect(0,0,800,55);
+        titleBar.fillStyle(0xA0522D,1); titleBar.fillRect(0,0,800,50);
+        this.add.text(400,25,'How to Play',{font:'bold 28px Arial',fill:'#FFD700',stroke:'#000',strokeThickness:4}).setOrigin(0.5).setDepth(21);
 
-        // Panel
-        let panel = this.add.graphics().setDepth(6);
-        panel.fillStyle(0x8B4513,1); panel.fillRoundedRect(80, 40, 640, 520, 20);
-        panel.fillStyle(0xA0522D,1); panel.fillRoundedRect(90, 50, 620, 500, 15);
+        // Skip button — solid pill background for readability
+        let skipBg = this.add.graphics().setDepth(29);
+        skipBg.fillStyle(0x3E2723,0.9); skipBg.fillRoundedRect(602,566,185,28,14);
+        let skipTxt = this.add.text(694,580,'Skip tutorial  →',{font:'bold 16px Arial',fill:'#FFD700'}).setOrigin(0.5).setDepth(30);
+        let skipZone = this.add.zone(694,580,185,28).setInteractive({cursor:'pointer'}).setDepth(31);
+        skipZone.on('pointerover', ()=>{ skipBg.clear(); skipBg.fillStyle(0x5D4037,0.95); skipBg.fillRoundedRect(602,566,185,28,14); });
+        skipZone.on('pointerout',  ()=>{ skipBg.clear(); skipBg.fillStyle(0x3E2723,0.9); skipBg.fillRoundedRect(602,566,185,28,14); });
+        skipZone.on('pointerdown', ()=>this._goToMenu());
 
-        this.add.text(400, 90, '🎓 How to Play', { font:'bold 36px Arial', fill:'#FFD700', stroke:'#000', strokeThickness:4 }).setOrigin(0.5).setDepth(7);
+        // Hint caption bar — taller for better readability
+        let captionBg = this.add.graphics().setDepth(20);
+        captionBg.fillStyle(0x4E342E,0.95); captionBg.fillRoundedRect(130,57,540,44,14);
+        captionBg.lineStyle(2,0xFFD700,0.6); captionBg.strokeRoundedRect(130,57,540,44,14);
+        this.caption = this.add.text(400,79,'',{font:'bold 17px Arial',fill:'#FFD700',stroke:'#000',strokeThickness:2}).setOrigin(0.5).setDepth(21);
 
-        this.step = 0;
-        this.steps = [
-            { title:'Step 1: A Mole Pops Up!', desc:'A mole pops out of a hole\nshowing a multiplication\nequation in a speech bubble.', run: (s) => s._demoMolePop() },
-            { title:'Step 2: Read the Equation', desc:'Check if the answer shown\nis CORRECT.\n\nFor example: 5 x 10 = 50 ✓\nor  5 x 10 = 500 ✗', run: (s) => s._demoEquation() },
-            { title:'Step 3: Smash Correct Ones!', desc:'Move your hammer and click\n to smash a CORRECT mole.\n\nYou earn +10 points!', run: (s) => s._demoHit(true) },
-            { title:'Step 4: Avoid Wrong Ones!', desc:'Leave wrong moles alone.\nIf you hit a wrong mole\nno points are awarded.', run: (s) => s._demoHit(false) },
-            { title:'Step 5: Reach the Target!', desc:'Each difficulty has a target\nscore. Reach it to WIN!\n\nEasy: 50  Medium: 80  Hard: 120', run: (s) => s._demoTarget() }
-        ];
+        // Score display (mini)
+        let scoreBg = this.add.graphics().setDepth(20);
+        scoreBg.fillStyle(0x8B4513,1); scoreBg.fillRoundedRect(20,60,100,40,8);
+        scoreBg.fillStyle(0xA0522D,1); scoreBg.fillRoundedRect(24,64,92,32,6);
+        this.add.text(70,72,'SCORE',{font:'bold 10px Arial',fill:'#FFD700'}).setOrigin(0.5).setDepth(21);
+        this.tutScore = 0;
+        this.tutScoreText = this.add.text(70,84,'0',{font:'bold 16px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(21);
 
-        // Animation stage area
-        this.stage = this.add.container(400, 310).setDepth(7);
-        this.stageTitle = this.add.text(400, 135, '', { font:'bold 22px Arial', fill:'#FFF', stroke:'#000', strokeThickness:3 }).setOrigin(0.5).setDepth(8);
-        this.stageDesc  = this.add.text(560, 330, '', { font:'18px Arial', fill:'#FFF', align:'left', lineSpacing:8, wordWrap:{width:220} }).setOrigin(0.5).setDepth(8);
-
-        // Stage viewport background
-        let vp = this.add.graphics().setDepth(6);
-        vp.fillStyle(0x795548,0.5); vp.fillRoundedRect(100,160,320,330,10);
-
-        // Prev / Next buttons
-        this.btnPrev = this.createBtn(230, 530, '◀  Prev', 0x607D8B, 0x78909C, () => this.changeStep(-1));
-        this.btnNext = this.createBtn(450, 530, 'Next  ▶', 0x27AE60, 0x2ECC71, () => this.changeStep(1));
-        this.btnClose = this.createBtn(680, 90, 'Close ✕', 0xC0392B, 0xE74C3C, () => this.scene.start('LevelSelectScene'));
-
-        this.stepObjects = [];
-        this.showStep(0);
-    }
-    createBtn(x, y, text, col, hover, fn) {
-        let bg = this.add.graphics().setDepth(9);
-        bg.fillStyle(col,1); bg.fillRoundedRect(x-65,y-18,130,36,8);
-        let lbl = this.add.text(x, y, text, { font:'bold 15px Arial', fill:'#FFF' }).setOrigin(0.5).setDepth(10);
-        let z = this.add.zone(x,y,130,36).setInteractive({ cursor:'pointer' }).setDepth(10);
-        z.on('pointerover',  ()=>{ bg.clear(); bg.fillStyle(hover,1); bg.fillRoundedRect(x-65,y-18,130,36,8); });
-        z.on('pointerout',   ()=>{ bg.clear(); bg.fillStyle(col,1);   bg.fillRoundedRect(x-65,y-18,130,36,8); });
-        z.on('pointerdown', fn);
-        return { bg, lbl, z };
-    }
-    changeStep(dir) {
-        let next = this.step + dir;
-        if (next < 0 || next >= this.steps.length) return;
-        this.showStep(next);
-    }
-    showStep(i) {
-        this.step = i;
-        this.stepObjects.forEach(o => { try { o.destroy(); } catch(e){} });
-        this.stepObjects = [];
-        this.stage.removeAll(true);
-
-        let s = this.steps[i];
-        this.stageTitle.setText(s.title);
-        this.stageDesc.setText(s.desc);
-        s.run(this);
-
-        // Indicator dots
-        this.steps.forEach((_, j) => {
-            let dot = this.add.graphics().setDepth(9);
-            dot.fillStyle(j===i ? 0xFFD700 : 0xFFFFFF, j===i ? 1 : 0.4);
-            dot.fillCircle(325 + j*30, 510, j===i ? 8 : 5);
-            this.stepObjects.push(dot);
+        // Holes + moles
+        this.tutMoles = [];
+        let holePositions = [[200,370],[400,370],[600,370],[300,460],[500,460]];
+        let bgHoles = this.add.graphics().setDepth(1);
+        holePositions.forEach(([hx,hy])=>{
+            bgHoles.fillStyle(0x3E2723,1); bgHoles.fillEllipse(hx,hy,100,35);
+            this.tutMoles.push(new Mole(this,hx,hy));
         });
+
+        // Bot hammer (no pointer event needed, purely visual)
+        this.botHammer = new Hammer(this);
+        this.botHammer.setPosition(-100, -100); // start offscreen
+
+        // Phase indicator dots
+        this.totalPhases = 5;
+        this.dotGraphics = this.add.graphics().setDepth(21);
+        this._drawDots(0);
+
+        // Start bot demo
+        this.time.delayedCall(600, ()=>this._runPhase(0));
     }
-    _miniMole(x, y, happy=true) {
-        let g = this.add.graphics({ x, y }).setDepth(8);
-        g.fillStyle(0x8D6E63,1); g.fillRoundedRect(-20,-25,40,55,20);
-        g.fillStyle(0xD7CCC8,1); g.fillEllipse(0,-5,22,14);
-        g.fillStyle(0x000000,1); g.fillCircle(-8,-12,4); g.fillCircle(8,-12,4); g.fillEllipse(0,-10,8,5);
-        if (happy) { g.lineStyle(2,0x000000); g.beginPath(); g.arc(0,-5,6,0.3,Math.PI-0.3,false); g.strokePath(); }
-        else { g.lineStyle(2,0x000000); g.beginPath();
-            g.moveTo(-12,-16); g.lineTo(-6,-10); g.moveTo(-12,-10); g.lineTo(-6,-16);
-            g.moveTo(6,-16);  g.lineTo(12,-10); g.moveTo(6,-10);  g.lineTo(12,-16); g.strokePath();
-            g.beginPath(); g.arc(0,-3,5,Math.PI+0.5,2*Math.PI-0.5,false); g.strokePath();
+
+    _drawDots(currentPhase) {
+        this.dotGraphics.clear();
+        for (let i=0; i<this.totalPhases; i++) {
+            let active = i===currentPhase;
+            this.dotGraphics.fillStyle(active ? 0xFFD700 : 0xFFFFFF, active ? 1 : 0.4);
+            this.dotGraphics.fillCircle(340+i*30, 555, active ? 8 : 5);
         }
-        this.stepObjects.push(g); return g;
     }
-    _miniHole(x, y) {
-        let g = this.add.graphics({ x, y }).setDepth(7);
-        g.fillStyle(0x3E2723,1); g.fillEllipse(0,0,70,24);
-        this.stepObjects.push(g); return g;
+
+    _setCaption(text) { this.caption.setText(text); }
+
+    _goToMenu() { this.scene.start('LevelSelectScene'); }
+
+    // ── BOT DEMO PHASES ───────────────────────────────
+    _runPhase(phase) {
+        if (phase >= this.totalPhases) { this.time.delayedCall(800, ()=>this._goToMenu()); return; }
+        this._drawDots(phase);
+
+        switch(phase) {
+            case 0: this._phase_MolePopsUp(); break;
+            case 1: this._phase_BotHitsCorrect(); break;
+            case 2: this._phase_WrongMoleIgnored(); break;
+            case 3: this._phase_BothMolesChooseCorrect(); break;
+            case 4: this._phase_TargetReached(); break;
+        }
     }
-    _miniBubble(x, y, text) {
-        let bg = this.add.graphics({ x, y }).setDepth(9);
-        bg.fillStyle(0xFFFFFF,1); bg.lineStyle(2,0x000000);
-        bg.fillRoundedRect(-42,-50,84,44,8); bg.strokeRoundedRect(-42,-50,84,44,8);
-        bg.fillTriangle(-5,0,5,0,-8,-6); bg.strokeTriangle(-5,0,5,0,-8,-6);
-        let txt = this.add.text(x,-28, text, { font:'bold 12px Arial', fill:'#000', align:'center' }).setOrigin(0.5).setDepth(10);
-        this.stepObjects.push(bg, txt); return { bg, txt };
+
+    _nextPhase(phase, delay=2800) {
+        this.time.delayedCall(delay, ()=>this._runPhase(phase+1));
     }
-    _demoMolePop() {
-        let hole = this._miniHole(260, 330);
-        let mole = this._miniMole(260, 500);
-        this.tweens.add({ targets: mole, y: 300, duration: 700, ease:'Back.easeOut',
-            onComplete: () => { let b = this._miniBubble(260, 265, '5 x 10\n= 50'); }
+
+    // Phase 0: Explain moles pop out
+    _phase_MolePopsUp() {
+        this._setCaption('🦔  A mole pops out showing an equation!');
+        let mole = this.tutMoles[2];
+        mole.pop({ text:'5 x 10\n= 50', isCorrect:true }, 4000);
+        // Animate caption arrow pointing at bubble
+        this.time.delayedCall(900, ()=>{
+            // Arrow points to bubble which is above mole.y; bubble right edge ≈ mole.x+60
+            let arrowBg = this.add.graphics().setDepth(24);
+            arrowBg.fillStyle(0x000000,0.55); arrowBg.fillRoundedRect(mole.x+62, mole.y-115, 130, 30, 8);
+            let arrow = this.add.text(mole.x+88, mole.y-100,'👈 Read this!',{font:'bold 14px Arial',fill:'#FFD700'}).setOrigin(0,0.5).setDepth(25);
+            this.tweens.add({ targets:[arrow,arrowBg], x:'+=0', alpha:{from:1,to:0.4}, duration:500, yoyo:true, repeat:2, onComplete:()=>{ arrow.destroy(); arrowBg.destroy(); } });
         });
+        this._nextPhase(0, 3200);
     }
-    _demoEquation() {
-        let correct = this._miniBubble(180, 210, '5 x 10\n= 50');
-        let wrong   = this._miniBubble(310, 210, '5 x 10\n= 500');
-        let tick = this.add.text(210, 180, '✓', {font:'bold 28px Arial', fill:'#00E676', stroke:'#000', strokeThickness:3}).setDepth(9);
-        let cross = this.add.text(340, 180, '✗', {font:'bold 28px Arial', fill:'#FF1744', stroke:'#000', strokeThickness:3}).setDepth(9);
-        this.stepObjects.push(tick, cross);
-        this.tweens.add({ targets:[tick, cross], scaleX:{from:0,to:1}, scaleY:{from:0,to:1}, duration:400, ease:'Back.easeOut' });
-    }
-    _demoHit(isCorrect) {
-        let hole = this._miniHole(260, 330);
-        let mole = this._miniMole(260, 500, true);
-        this._miniBubble(260, 260, isCorrect ? '5 x 10\n= 50' : '5 x 10\n= 500');
-        this.tweens.add({ targets: mole, y: 300, duration: 600, ease:'Back.easeOut' });
-        // Animated hammer
-        let hx=220, hy=200;
-        let hg = this.add.graphics().setDepth(10);
-        hg.fillStyle(0x8B4513,1); hg.fillRoundedRect(-6,-28,12,44,3);
-        hg.fillStyle(0x607D8B,1); hg.fillRoundedRect(-22,-40,44,22,5);
-        hg.setPosition(hx, hy); hg.angle=-20;
-        this.stepObjects.push(hg);
-        this.time.delayedCall(800, () => {
-            this.tweens.add({ targets: hg, angle: 45, duration: 100, yoyo: true, ease:'Sine.easeInOut',
-                onYoyo: () => {
-                    // Show feedback
-                    let fb = this.add.text(260, 240, isCorrect?'+10':'Wrong!', {font:'bold 24px Arial', fill: isCorrect?'#00E676':'#FF1744', stroke:'#000', strokeThickness:3}).setOrigin(0.5).setDepth(11);
-                    let icon = this.add.text(260, 270, isCorrect?'✓':'✗', {font:'bold 50px Arial', fill: isCorrect?'#00E676':'#FF1744'}).setOrigin(0.5).setDepth(11).setScale(0);
-                    this.tweens.add({targets: icon, scale:1, duration:200, ease:'Back.easeOut'});
-                    this.tweens.add({targets:[fb,icon], y: isCorrect?190:190, alpha:0, delay:1000, duration:500, onComplete:()=>{fb.destroy(); icon.destroy();}});
-                    this.stepObjects.push(fb, icon);
-                    this.tweens.add({targets: mole, y:450, duration:300, delay:200});
+
+    // Phase 1: Bot moves hammer and smashes correct mole
+    _phase_BotHitsCorrect() {
+        this._setCaption('✅  If it is CORRECT — SMASH IT! Get +10 points!');
+        let mole = this.tutMoles[1];
+        mole.pop({ text:'7 x 100\n= 700', isCorrect:true }, 5000);
+
+        // Move bot hammer to mole position after a small delay
+        this.botHammer.setPosition(750, 200);
+        this.time.delayedCall(1200, ()=>{
+            this.tweens.add({ targets:this.botHammer, x:mole.x, y:mole.y-60, duration:600, ease:'Cubic.easeInOut',
+                onComplete:()=>{
+                    this.botHammer.swing();
+                    mole.hit();
+                    SoundEffect.playCorrect();
+                    // Green flash + score
+                    showCorrectFeedback(this, mole.x, mole.y);
+                    this.tutScore+=10; this.tutScoreText.setText(this.tutScore.toString());
+                    // Move hammer back
+                    this.time.delayedCall(700, ()=>this.tweens.add({ targets:this.botHammer, x:720, y:180, duration:400, ease:'Cubic.easeOut' }));
                 }
             });
         });
+        this._nextPhase(1, 3800);
     }
-    _demoTarget() {
-        // Progress bar toward target
-        let barBg = this.add.graphics().setDepth(8);
-        barBg.fillStyle(0x5D4037,1); barBg.fillRoundedRect(110,220,300,36,10);
-        this.stepObjects.push(barBg);
-        let bar = this.add.graphics().setDepth(9);
-        bar.fillStyle(0x27AE60,1); bar.fillRoundedRect(110,220,0,36,10);
-        this.stepObjects.push(bar);
-        let score = this.add.text(260, 195, 'Score: 0 / 50', {font:'bold 20px Arial', fill:'#FFD700'}).setOrigin(0.5).setDepth(9);
-        this.stepObjects.push(score);
-        let val = { v:0 };
-        this.tweens.add({ targets: val, v: 50, duration: 2500, ease:'Cubic.easeInOut',
-            onUpdate: () => {
-                let pct = Math.min(val.v/50, 1);
-                bar.clear(); bar.fillStyle(0x27AE60,1); bar.fillRoundedRect(110,220,300*pct,36,10);
-                score.setText(`Score: ${Math.floor(val.v)} / 50`);
+
+    // Phase 2: Wrong mole pops up, bot shakes hammer (no-no) and leaves it
+    _phase_WrongMoleIgnored() {
+        this._setCaption('❌  If it is WRONG — leave it! Don\'t smash wrong ones!');
+        let mole = this.tutMoles[3];
+        mole.pop({ text:'4 x 10\n= 400', isCorrect:false }, 4500);
+
+        this.botHammer.setPosition(720, 180);
+        this.time.delayedCall(1000, ()=>{
+            // Move toward mole then pause/shake (hesitation)
+            this.tweens.add({ targets:this.botHammer, x:mole.x+60, y:mole.y-80, duration:600, ease:'Cubic.easeInOut',
+                onComplete:()=>{
+                    // Shake side to side (shake = "no!")
+                    this.tweens.add({ targets:this.botHammer, x:mole.x+60+20, duration:80, yoyo:true, repeat:5, ease:'Sine.easeInOut' });
+                    // Show big X without hitting
+                    let cross = this.add.text(mole.x,mole.y-40,'✗',{font:'bold 60px Arial',fill:'#FF1744',stroke:'#fff',strokeThickness:4}).setOrigin(0.5).setDepth(70).setScale(0);
+                    this.tweens.add({ targets:cross, scale:1, duration:200, ease:'Back.easeOut' });
+                    this.tweens.add({ targets:cross, alpha:0, delay:1200, duration:500, onComplete:()=>cross.destroy() });
+                    this.time.delayedCall(900, ()=>{
+                        this.tweens.add({ targets:this.botHammer, x:720, y:180, duration:400, ease:'Cubic.easeOut' });
+                        mole.hide();
+                    });
+                }
+            });
+        });
+        this._nextPhase(2, 3800);
+    }
+
+    // Phase 3: Two moles, bot picks the correct one
+    _phase_BothMolesChooseCorrect() {
+        this._setCaption('🎯  Two moles! Find and smash only the CORRECT one!');
+        let wrong   = this.tutMoles[0];
+        let correct = this.tutMoles[4];
+        wrong.pop(  { text:'3 x 100\n= 3000', isCorrect:false }, 5000);
+        correct.pop({ text:'3 x 100\n= 300',  isCorrect:true  }, 5000);
+
+        this.botHammer.setPosition(720, 180);
+        this.time.delayedCall(1000, ()=>{
+            // Move toward wrong mole first (pretend to consider)
+            this.tweens.add({ targets:this.botHammer, x:wrong.x+50, y:wrong.y-80, duration:500, ease:'Cubic.easeInOut',
+                onComplete:()=>{
+                    // Hesitate then move to correct
+                    this.time.delayedCall(400, ()=>{
+                        this.tweens.add({ targets:this.botHammer, x:correct.x, y:correct.y-60, duration:600, ease:'Cubic.easeInOut',
+                            onComplete:()=>{
+                                this.botHammer.swing(); correct.hit(); SoundEffect.playCorrect();
+                                showCorrectFeedback(this, correct.x, correct.y);
+                                this.tutScore+=10; this.tutScoreText.setText(this.tutScore.toString());
+                                this.time.delayedCall(700, ()=>{ wrong.hide(); this.tweens.add({ targets:this.botHammer, x:720, y:180, duration:400 }); });
+                            }
+                        });
+                    });
+                }
+            });
+        });
+        this._nextPhase(3, 4200);
+    }
+
+    // Phase 4: Show score + target, celebrate
+    _phase_TargetReached() {
+        this._setCaption('🏆  Reach the target score to WIN the game!');
+
+        // Progress bar
+        let barBg = this.add.graphics().setDepth(25);
+        barBg.fillStyle(0x5D4037,1); barBg.fillRoundedRect(150,430,500,30,8);
+        let bar = this.add.graphics().setDepth(26);
+        let labelTarget = this.add.text(400,415,'Score: 0 / 50',{font:'bold 18px Arial',fill:'#FFD700'}).setOrigin(0.5).setDepth(26);
+
+        let val={v:0};
+        this.tweens.add({ targets:val, v:50, duration:2000, ease:'Cubic.easeInOut',
+            onUpdate:()=>{
+                let pct=Math.min(val.v/50,1);
+                bar.clear(); bar.fillStyle(pct<0.7?0xF39C12:0x27AE60,1); bar.fillRoundedRect(150,430,500*pct,30,8);
+                labelTarget.setText(`Score: ${Math.floor(val.v)} / 50`);
             },
-            onComplete: () => {
-                let win = this.add.text(260, 300, '🎉 You Win!', {font:'bold 32px Arial', fill:'#FFD700', stroke:'#000',strokeThickness:4}).setOrigin(0.5).setDepth(10).setScale(0);
-                this.tweens.add({targets:win, scale:1, duration:500, ease:'Back.easeOut'});
-                this.stepObjects.push(win);
+            onComplete:()=>{
+                SoundEffect.playWin();
+                let win=this.add.text(400,490,'🎉 You Win! Now it\'s YOUR turn!',{font:'bold 24px Arial',fill:'#FFD700',stroke:'#000',strokeThickness:4}).setOrigin(0.5).setDepth(27).setScale(0);
+                this.tweens.add({ targets:win, scale:1, duration:500, ease:'Back.easeOut' });
+                this.time.delayedCall(2000, ()=>this._goToMenu());
             }
         });
     }
 }
 
-// ─── LEVEL SELECT SCENE ─────────────────────────────────
+// ════════════════════════════════════════════════════════
+// SCENE 3 — LEVEL SELECT
+// ════════════════════════════════════════════════════════
 class LevelSelectScene extends Phaser.Scene {
     constructor() { super('LevelSelectScene'); }
     create() {
-        drawDesertBackground(this);
-        this.input.setDefaultCursor('default');
-
-        let overlay = this.add.graphics().setDepth(5);
-        overlay.fillStyle(0x000000,0.4); overlay.fillRect(0,0,800,600);
-        let board = this.add.graphics().setDepth(5);
-        board.fillStyle(0x8B4513,1); board.fillRoundedRect(150,100,500,400,20);
-        board.fillStyle(0xA0522D,1); board.fillRoundedRect(160,110,480,380,15);
-
-        this.add.text(400,180,'Powers of 10 Math',{font:'bold 42px Arial',fill:'#FFD700',stroke:'#000',strokeThickness:6}).setOrigin(0.5).setDepth(6);
-        this.createBtn(400,260,'How to Play',0x3F51B5,0x5C6BC0, ()=>this.scene.start('TutorialScene'));
-
-        this.add.text(400,345,'Select Difficulty:',{font:'bold 24px Arial',fill:'#FFD700'}).setOrigin(0.5).setDepth(6);
-        this.createBtn(240,420,'Easy',0x4CAF50,0x66BB6A, ()=>this.scene.start('GameScene',{level:'easy'}));
-        this.createBtn(400,420,'Medium',0xFF9800,0xFFB74D, ()=>this.scene.start('GameScene',{level:'medium'}));
-        this.createBtn(560,420,'Hard',0xF44336,0xEF5350, ()=>this.scene.start('GameScene',{level:'hard'}));
+        drawDesertBackground(this); this.input.setDefaultCursor('default');
+        let overlay=this.add.graphics().setDepth(5); overlay.fillStyle(0x000000,0.45); overlay.fillRect(0,0,800,600);
+        // Board with dark-border polish (same as splash)
+        let board=this.add.graphics().setDepth(5);
+        board.lineStyle(4, 0x4A2800, 1);
+        board.fillStyle(0x8B4513,1); board.fillRoundedRect(200,150,400,310,20);
+        board.strokeRoundedRect(200,150,400,310,20);
+        board.fillStyle(0xA0522D,1); board.fillRoundedRect(208,158,384,294,16);
+        this.add.text(400,200,'Powers of 10 Math',{font:'bold 34px Arial',fill:'#FFD700',stroke:'#000',strokeThickness:5}).setOrigin(0.5).setDepth(6);
+        // Smaller How to Play button
+        this.createBtnSmall(400,258,'▶  How to Play',0x3F51B5,0x5C6BC0,()=>this.scene.start('TutorialScene'));
+        this.add.text(400,315,'Select Difficulty:',{font:'bold 18px Arial',fill:'#FFD700'}).setOrigin(0.5).setDepth(6);
+        // Buttons closer together (80 px spacing)
+        this.createBtn(300,368,'Easy',  0x4CAF50,0x66BB6A, ()=>this.scene.start('GameScene',{level:'easy'}));
+        this.createBtn(400,368,'Medium',0xFF9800,0xFFB74D, ()=>this.scene.start('GameScene',{level:'medium'}));
+        this.createBtn(500,368,'Hard',  0xF44336,0xEF5350, ()=>this.scene.start('GameScene',{level:'hard'}));
     }
-    createBtn(x, y, text, col, hover, fn) {
-        let bg = this.add.graphics().setDepth(6); bg.fillStyle(col,1); bg.fillRoundedRect(x-65,y-25,130,50,10);
-        this.add.text(x,y,text,{font:'bold 16px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(7);
-        let z = this.add.zone(x,y,130,50).setInteractive({cursor:'pointer'});
-        z.on('pointerdown', fn);
-        z.on('pointerover',()=>{ bg.clear(); bg.fillStyle(hover,1); bg.fillRoundedRect(x-65,y-25,130,50,10); });
-        z.on('pointerout', ()=>{ bg.clear(); bg.fillStyle(col,1);   bg.fillRoundedRect(x-65,y-25,130,50,10); });
+    // Compact difficulty button (80x34)
+    createBtn(x,y,text,col,hover,fn) {
+        let bg=this.add.graphics().setDepth(6); bg.fillStyle(col,1); bg.fillRoundedRect(x-40,y-17,80,34,8);
+        this.add.text(x,y,text,{font:'bold 13px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(7);
+        let z=this.add.zone(x,y,80,34).setInteractive({cursor:'pointer'});
+        z.on('pointerdown',fn);
+        z.on('pointerover',()=>{ bg.clear(); bg.fillStyle(hover,1); bg.fillRoundedRect(x-40,y-17,80,34,8); });
+        z.on('pointerout', ()=>{ bg.clear(); bg.fillStyle(col,1);   bg.fillRoundedRect(x-40,y-17,80,34,8); });
+    }
+    // Smaller 'How to Play' pill button (110x32)
+    createBtnSmall(x,y,text,col,hover,fn) {
+        let bg=this.add.graphics().setDepth(6); bg.fillStyle(col,1); bg.fillRoundedRect(x-55,y-16,110,32,8);
+        this.add.text(x,y,text,{font:'bold 13px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(7);
+        let z=this.add.zone(x,y,110,32).setInteractive({cursor:'pointer'});
+        z.on('pointerdown',fn);
+        z.on('pointerover',()=>{ bg.clear(); bg.fillStyle(hover,1); bg.fillRoundedRect(x-55,y-16,110,32,8); });
+        z.on('pointerout', ()=>{ bg.clear(); bg.fillStyle(col,1);   bg.fillRoundedRect(x-55,y-16,110,32,8); });
     }
 }
 
-// ─── GAME SCENE ─────────────────────────────────────────
+// ════════════════════════════════════════════════════════
+// SCENE 4 — GAME
+// ════════════════════════════════════════════════════════
 class GameScene extends Phaser.Scene {
     constructor() { super('GameScene'); }
-    init(data) { this.level = data.level || 'easy'; }
+    init(data) { this.level=data.level||'easy'; }
     create() {
-        this.score = 0; this.moles = []; this.comboCount = 0;
-        this.targetScore = TARGET_SCORES[this.level];
-        this.gameOver = false;
+        this.score=0; this.moles=[]; this.comboCount=0; this.targetScore=TARGET_SCORES[this.level]; this.gameOver=false; this._nightStarted=false;
         this.input.setDefaultCursor('none');
-        drawDesertBackground(this);
-        this.drawUI();
-
-        let bgHoles = this.add.graphics().setDepth(1);
+        drawDesertBackground(this); this.drawUI();
+        let bgHoles=this.add.graphics().setDepth(1);
         for (let row=0; row<3; row++) {
             for (let col=0; col<3; col++) {
                 let hx=100+col*300, hy=320+row*100;
-                if (row===1) hx+=150; if (row===1 && col===2) continue;
+                if (row===1) hx+=150; if (row===1&&col===2) continue;
                 bgHoles.fillStyle(0x3E2723,1); bgHoles.fillEllipse(hx,hy,100,35);
-                this.moles.push(new Mole(this, hx, hy));
+                this.moles.push(new Mole(this,hx,hy));
             }
         }
-
-        this.hammer = new Hammer(this); this.isHammerActive = true;
+        this.hammer=new Hammer(this); this.isHammerActive=true;
         this.input.on('pointermove',(ptr)=>{ if(this.isHammerActive){ this.hammer.x=ptr.x; this.hammer.y=ptr.y; } });
         this.input.on('pointerdown',(ptr)=>{
-            if (!this.isHammerActive || this.gameOver) return;
+            if (!this.isHammerActive||this.gameOver) return;
             this.hammer.swing();
             for (let mole of [...this.moles].sort((a,b)=>b.y-a.y)) {
-                if (mole.isActive && !mole.wasHit &&
-                    Phaser.Geom.Rectangle.Contains(new Phaser.Geom.Rectangle(mole.x-55,mole.y-125,110,140), ptr.x, ptr.y)) {
+                if (mole.isActive&&!mole.wasHit&&Phaser.Geom.Rectangle.Contains(new Phaser.Geom.Rectangle(mole.x-55,mole.y-125,110,140),ptr.x,ptr.y)) {
                     this.checkHit(mole); break;
                 }
             }
         });
-
-        // Day→Night at halfway through target (visual flair still works)
-        this.events.on('scoreUpdate', ()=>{ if (this.score >= this.targetScore/2) this.transitionToNight(); });
+        this.events.on('scoreUpdate',()=>{ if(this.score>=this.targetScore/2) this.transitionToNight(); });
         this.queueSpawn();
     }
-
     transitionToNight() {
-        if (this._nightStarted) return; this._nightStarted = true;
-        this.tweens.addCounter({
-            from:0, to:100, duration:6000,
+        if (this._nightStarted) return; this._nightStarted=true;
+        this.tweens.addCounter({ from:0, to:100, duration:6000,
             onUpdate:(tw)=>{
-                let sc1=Phaser.Display.Color.Interpolate.ColorWithColor(Phaser.Display.Color.ValueToColor(0x87CEEB),Phaser.Display.Color.ValueToColor(0x1a2a6c),100,tw.getValue());
-                let sc2=Phaser.Display.Color.Interpolate.ColorWithColor(Phaser.Display.Color.ValueToColor(0x4a90e2),Phaser.Display.Color.ValueToColor(0x0a1128),100,tw.getValue());
+                let s1=Phaser.Display.Color.Interpolate.ColorWithColor(Phaser.Display.Color.ValueToColor(0x87CEEB),Phaser.Display.Color.ValueToColor(0x1a2a6c),100,tw.getValue());
+                let s2=Phaser.Display.Color.Interpolate.ColorWithColor(Phaser.Display.Color.ValueToColor(0x4a90e2),Phaser.Display.Color.ValueToColor(0x0a1128),100,tw.getValue());
                 this.skyGraphics.clear();
-                this.skyGraphics.fillGradientStyle(Phaser.Display.Color.GetColor(sc2.r,sc2.g,sc2.b),Phaser.Display.Color.GetColor(sc2.r,sc2.g,sc2.b),Phaser.Display.Color.GetColor(sc1.r,sc1.g,sc1.b),Phaser.Display.Color.GetColor(sc1.r,sc1.g,sc1.b),1);
+                this.skyGraphics.fillGradientStyle(Phaser.Display.Color.GetColor(s2.r,s2.g,s2.b),Phaser.Display.Color.GetColor(s2.r,s2.g,s2.b),Phaser.Display.Color.GetColor(s1.r,s1.g,s1.b),Phaser.Display.Color.GetColor(s1.r,s1.g,s1.b),1);
                 this.skyGraphics.fillRect(0,0,800,600);
                 this.sun.setAlpha(1-tw.getValue()/100); this.moon.setAlpha(tw.getValue()/100); this.stars.setAlpha(tw.getValue()/100);
             }
         });
     }
-
     drawUI() {
-        let ui = this.add.graphics().setDepth(20);
-        // Score badge
+        let ui=this.add.graphics().setDepth(20);
         ui.fillStyle(0x8B4513,1); ui.fillRoundedRect(20,20,150,60,10);
         ui.fillStyle(0xA0522D,1); ui.fillRoundedRect(25,25,140,50,8);
         this.add.text(95,40,'SCORE',{font:'bold 12px Arial',fill:'#FFD700'}).setOrigin(0.5).setDepth(21);
-        this.scoreText = this.add.text(95,60,'0',{font:'bold 22px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(21);
-
-        // Target badge
+        this.scoreText=this.add.text(95,60,'0',{font:'bold 22px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(21);
         ui.fillStyle(0x8B4513,1); ui.fillRoundedRect(630,20,150,60,10);
         ui.fillStyle(0xA0522D,1); ui.fillRoundedRect(635,25,140,50,8);
-        this.add.text(705,40,`TARGET`,{font:'bold 12px Arial',fill:'#FFD700'}).setOrigin(0.5).setDepth(21);
+        this.add.text(705,40,'TARGET',{font:'bold 12px Arial',fill:'#FFD700'}).setOrigin(0.5).setDepth(21);
         this.add.text(705,60,`${this.targetScore}`,{font:'bold 22px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(21);
-
-        // Progress bar
         ui.fillStyle(0x795548,1); ui.fillRoundedRect(20,90,760,18,4);
-        this.progressBar = this.add.graphics().setDepth(21);
-        this._updateProgress();
-
-        // Center board
+        this.progressBar=this.add.graphics().setDepth(21); this._updateProgress();
         ui.fillStyle(0x795548,1); ui.fillRect(375,0,15,90);
         ui.fillStyle(0x8D6E63,1); ui.fillRoundedRect(250,20,290,65,10);
         ui.fillStyle(0x795548,1); ui.fillRoundedRect(255,25,280,55,5);
         this.add.text(395,40,'Smash Correct:',{font:'bold 13px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(21);
         this.add.text(395,65,'+10 pts',{font:'bold 22px "Arial Black"',fill:'#00E676'}).setOrigin(0.5).setDepth(21);
-
         this.createSmallBtn(750,570,'Home',0x3F51B5,()=>this.scene.start('LevelSelectScene'));
         this.createSmallBtn(680,570,'Reset',0xFF5722,()=>this.scene.restart());
     }
-
     _updateProgress() {
         this.progressBar.clear();
-        let pct = Math.min(this.score/this.targetScore, 1);
-        let w = 760*pct;
-        if (w > 0) {
-            let col = pct < 0.5 ? 0xF39C12 : (pct < 0.9 ? 0x27AE60 : 0x00E676);
-            this.progressBar.fillStyle(col,1); this.progressBar.fillRoundedRect(20,90,w,18,4);
-        }
+        let pct=Math.min(this.score/this.targetScore,1), w=760*pct;
+        if (w>0) { let c=pct<0.5?0xF39C12:(pct<0.9?0x27AE60:0x00E676); this.progressBar.fillStyle(c,1); this.progressBar.fillRoundedRect(20,90,w,18,4); }
     }
-
-    createSmallBtn(x, y, text, color, onClick) {
-        let g = this.add.graphics().setDepth(150); g.fillStyle(color,1); g.fillRoundedRect(x-30,y-15,60,30,8);
+    createSmallBtn(x,y,text,color,onClick) {
+        let g=this.add.graphics().setDepth(150); g.fillStyle(color,1); g.fillRoundedRect(x-30,y-15,60,30,8);
         this.add.text(x,y,text,{font:'bold 12px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(151);
-        let z = this.add.zone(x,y,70,40).setInteractive({cursor:'pointer'}).setDepth(151);
+        let z=this.add.zone(x,y,70,40).setInteractive({cursor:'pointer'}).setDepth(151);
         z.on('pointerover',()=>{ this.isHammerActive=false; this.hammer.setVisible(false); this.input.setDefaultCursor('pointer'); });
         z.on('pointerout', ()=>{ this.isHammerActive=true;  this.hammer.setVisible(true);  this.input.setDefaultCursor('none'); });
-        z.on('pointerdown', onClick);
+        z.on('pointerdown',onClick);
     }
-
-    queueSpawn() {
-        this.time.delayedCall(Phaser.Math.Between(1500,3000), ()=>{
-            if (!this.gameOver) { this.spawnMole(); this.queueSpawn(); }
-        });
-    }
-
+    queueSpawn() { this.time.delayedCall(Phaser.Math.Between(1500,3000),()=>{ if(!this.gameOver){ this.spawnMole(); this.queueSpawn(); } }); }
     spawnMole() {
-        let inactive = this.moles.filter(m => !m.isActive && !m.wasHit);
-        if (!inactive.length) return;
-        Phaser.Utils.Array.GetRandom(inactive).pop(generatePowerOf10Equation(this.level), Phaser.Math.Between(3000,5000));
+        let inactive=this.moles.filter(m=>!m.isActive&&!m.wasHit); if(!inactive.length) return;
+        Phaser.Utils.Array.GetRandom(inactive).pop(generatePowerOf10Equation(this.level),Phaser.Math.Between(3000,5000));
     }
-
     checkHit(mole) {
         mole.hit();
         if (mole.isEquationCorrect) {
-            this.score += 10; this.comboCount++;
-            this.scoreText.setText(this.score.toString());
-            this._updateProgress();
-            showCorrectFeedback(this, mole.x, mole.y);
-            SoundEffect.playCorrect();
-            if (this.comboCount===3)  showComboText(this, '3 hits Great!');
-            else if (this.comboCount===5)  showComboText(this, '5 hits Awesome!');
-            else if (this.comboCount===10) showComboText(this, '10 hits Master!');
-
-            // Check win condition
-            if (this.score >= this.targetScore) {
-                this.gameOver = true;
-                SoundEffect.playWin();
-                this.time.delayedCall(800, ()=>this.scene.start('GameOverScene',{score:this.score, won:true, level:this.level}));
+            this.score+=10; this.comboCount++; this.scoreText.setText(this.score.toString()); this._updateProgress();
+            showCorrectFeedback(this,mole.x,mole.y); SoundEffect.playCorrect();
+            if (this.comboCount===3)  showComboText(this,'3 hits Great!');
+            else if (this.comboCount===5)  showComboText(this,'5 hits Awesome!');
+            else if (this.comboCount===10) showComboText(this,'10 hits Master!');
+            if (this.score>=this.targetScore) {
+                this.gameOver=true; SoundEffect.playWin();
+                this.time.delayedCall(800,()=>this.scene.start('GameOverScene',{score:this.score,won:true,level:this.level}));
             }
             this.events.emit('scoreUpdate');
         } else {
-            // NO negative marking
-            this.comboCount = 0;
-            showIncorrectFeedback(this, mole.x, mole.y);
-            SoundEffect.playWrong();
+            this.comboCount=0; showIncorrectFeedback(this,mole.x,mole.y); SoundEffect.playWrong();
         }
     }
 }
 
-// ─── GAME OVER SCENE ────────────────────────────────────
+// ════════════════════════════════════════════════════════
+// SCENE 5 — GAME OVER
+// ════════════════════════════════════════════════════════
 class GameOverScene extends Phaser.Scene {
     constructor() { super('GameOverScene'); }
-    init(data) { this.finalScore = data.score||0; this.won = data.won||false; this.level = data.level||'easy'; }
+    init(data) { this.finalScore=data.score||0; this.won=data.won||false; this.level=data.level||'easy'; }
     create() {
         drawDesertBackground(this); this.input.setDefaultCursor('default');
-        let overlay = this.add.graphics().setDepth(5); overlay.fillStyle(0x000000,0.5); overlay.fillRect(0,0,800,600);
-        let board = this.add.graphics().setDepth(5); board.fillStyle(0x8B4513,1); board.fillRoundedRect(170,130,460,340,20);
-        board.fillStyle(0xA0522D,1); board.fillRoundedRect(180,140,440,320,15);
-
+        let overlay=this.add.graphics().setDepth(5); overlay.fillStyle(0x000000,0.5); overlay.fillRect(0,0,800,600);
+        let board=this.add.graphics().setDepth(5); board.fillStyle(0x8B4513,1); board.fillRoundedRect(170,130,460,340,20); board.fillStyle(0xA0522D,1); board.fillRoundedRect(180,140,440,320,15);
         if (this.won) {
             this.add.text(400,200,'🎉 Well Done!',{font:'bold 52px Arial',fill:'#FFD700',stroke:'#000',strokeThickness:6}).setOrigin(0.5).setDepth(6);
-            this.add.text(400,275,`Target Reached!`,{font:'bold 26px Arial',fill:'#00E676'}).setOrigin(0.5).setDepth(6);
+            this.add.text(400,270,'Target Reached!',{font:'bold 26px Arial',fill:'#00E676'}).setOrigin(0.5).setDepth(6);
         } else {
             this.add.text(400,210,'Keep Going!',{font:'bold 48px Arial',fill:'#FFD700',stroke:'#000',strokeThickness:6}).setOrigin(0.5).setDepth(6);
         }
         this.add.text(400,330,`Score: ${this.finalScore} / ${TARGET_SCORES[this.level]}`,{font:'bold 32px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(6);
-
-        let zone = this.add.zone(400,410,200,50).setInteractive({cursor:'pointer'});
-        zone.on('pointerdown',()=>this.scene.start('LevelSelectScene'));
-        let pbtn = this.add.graphics().setDepth(6); pbtn.fillStyle(0x4CAF50,1); pbtn.fillRoundedRect(300,390,200,44,10);
-        this.add.text(400,412,'Play Again',{font:'bold 24px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(7);
+        let pbtn=this.add.graphics().setDepth(6); pbtn.fillStyle(0x4CAF50,1); pbtn.fillRoundedRect(300,388,200,44,10);
+        let zone=this.add.zone(400,410,200,44).setInteractive({cursor:'pointer'}); zone.on('pointerdown',()=>this.scene.start('LevelSelectScene'));
+        this.add.text(400,410,'Play Again',{font:'bold 24px Arial',fill:'#FFF'}).setOrigin(0.5).setDepth(7);
     }
 }
 
-// ─── GAME CONFIG ────────────────────────────────────────
-const config = {
-    type: Phaser.AUTO, width: 800, height: 600, parent: 'game-container', backgroundColor: '#87CEEB',
-    scene: [BootScene, LevelSelectScene, TutorialScene, GameScene, GameOverScene]
-};
+// ─── BOOT ───────────────────────────────────────────────
+class BootScene extends Phaser.Scene {
+    constructor() { super('BootScene'); }
+    create() { this.scene.start('StartScene'); }
+}
+
+const config = { type:Phaser.AUTO, width:800, height:600, parent:'game-container', backgroundColor:'#87CEEB',
+    scene:[BootScene, StartScene, TutorialScene, LevelSelectScene, GameScene, GameOverScene] };
 new Phaser.Game(config);
 </script>
 </body>
