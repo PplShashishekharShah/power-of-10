@@ -7,21 +7,45 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #2c3e50; font-family: 'Arial', sans-serif; overflow: hidden; }
-        #game-container { box-shadow: 0 0 30px rgba(0,0,0,0.8); border-radius: 10px; overflow: hidden; }
+        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #222; font-family: 'Arial', sans-serif; overflow: hidden; }
+        #game-container { box-shadow: 0 0 50px rgba(0,0,0,0.9); border-radius: 12px; overflow: hidden; }
     </style>
 </head>
 <body>
 <div id="game-container"></div>
 <script>
+// Extend Phaser.Scene for global helpers
+Phaser.Scene.prototype.addMuteButton = function() {
+    let x = 760, y = 30;
+    let container = this.add.container(x, y).setDepth(1000).setScrollFactor(0);
+    let bg = this.add.circle(0, 0, 20, 0x000000, 0.4).setInteractive({cursor:'pointer'});
+    let icon = this.add.text(0, 0, SoundEffect.isMuted ? '🔇' : '🔊', {fontSize:'24px'}).setOrigin(0.5);
+    container.add([bg, icon]);
+    
+    bg.on('pointerdown', (ptr, x, y, event) => {
+        event.stopPropagation();
+        let muted = SoundEffect.toggleMute();
+        icon.setText(muted ? '🔇' : '🔊');
+    });
+    
+    this.tweens.add({ targets:container, scale:1.1, duration:200, ease:'Back.easeOut', paused:true, callbackScope:this });
+    bg.on('pointerover', () => { bg.setFillStyle(0x000000, 0.6); });
+    bg.on('pointerout', () => { bg.setFillStyle(0x000000, 0.4); });
+};
+
 // ─── TARGET SCORE PER LEVEL ─────────────────────────────
 const TARGET_SCORES = { easy: 50, medium: 80, hard: 120 };
 
 // ─── SOUND MANAGER ──────────────────────────────────────
+// ─── SOUND MANAGER ──────────────────────────────────────
 const SoundEffect = {
     audioCtx: null,
+    isMuted: false,
+    musicOsc: null,
+    musicGain: null,
     init() { if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); },
     _play(freq1, freq2, duration, waveform='sine') {
+        if (this.isMuted) return;
         this.init();
         const osc = this.audioCtx.createOscillator(), gain = this.audioCtx.createGain();
         osc.type = waveform;
@@ -35,34 +59,76 @@ const SoundEffect = {
     playCorrect() { this._play(440, 880, 0.3); },
     playWrong()   { this._play(110, 55, 0.4, 'sawtooth'); },
     playPop()     { this._play(200, 600, 0.1); },
-    playWin()     { [523,659,784,1047].forEach((f,i) => setTimeout(()=>this._play(f,f*1.1,0.3),i*120)); }
+    playWin()     { [523,659,784,1047].forEach((f,i) => setTimeout(()=>this._play(f,f*1.1,0.3),i*120)); },
+    
+    // Background Music Synthesis
+    startMusic() {
+        this.init();
+        if (this.musicOsc) return;
+        this.musicGain = this.audioCtx.createGain();
+        this.musicGain.gain.setValueAtTime(this.isMuted ? 0 : 0.12, this.audioCtx.currentTime);
+        this.musicGain.connect(this.audioCtx.destination);
+        
+        this._playMelody();
+    },
+    _playMelody() {
+        if (!this.musicGain) return;
+        const notes = [261.63, 293.66, 329.63, 349.23, 392.00]; // C4, D4, E4, F4, G4
+        let now = this.audioCtx.currentTime;
+        for (let i = 0; i < 8; i++) {
+            let osc = this.audioCtx.createOscillator();
+            let g = this.audioCtx.createGain();
+            osc.frequency.setValueAtTime(notes[Math.floor(Math.random() * notes.length)], now + i * 0.5);
+            g.gain.setValueAtTime(0, now + i * 0.5);
+            g.gain.linearRampToValueAtTime(0.05, now + i * 0.5 + 0.1);
+            g.gain.linearRampToValueAtTime(0, now + i * 0.5 + 0.4);
+            osc.connect(g); g.connect(this.musicGain);
+            osc.start(now + i * 0.5); osc.stop(now + i * 0.5 + 0.5);
+        }
+        setTimeout(() => this._playMelody(), 4000);
+    },
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        if (this.musicGain) {
+            this.musicGain.gain.setTargetAtTime(this.isMuted ? 0 : 0.12, this.audioCtx.currentTime, 0.1);
+        }
+        return this.isMuted;
+    }
 };
 
 // ─── BACKGROUND ─────────────────────────────────────────
+// ─── BACKGROUND ─────────────────────────────────────────
 function drawDesertBackground(scene) {
     let sky = scene.add.graphics().setDepth(0);
-    sky.fillGradientStyle(0x4a90e2, 0x4a90e2, 0x87CEEB, 0x87CEEB, 1);
+    // Pleasant "Warm Sky" Gradient: Peach/Orange to Sky Blue
+    sky.fillGradientStyle(0xFF7E5F, 0xFF7E5F, 0xFEB47B, 0xFEB47B, 1);
     sky.fillRect(0, 0, 800, 600);
     scene.skyGraphics = sky;
 
     scene.stars = scene.add.graphics().setDepth(0.1);
-    scene.stars.fillStyle(0xFFFFFF, 1);
-    for (let i=0; i<40; i++) scene.stars.fillCircle(Phaser.Math.Between(0,800), Phaser.Math.Between(0,250), Phaser.Math.Between(1,2));
-    scene.stars.setAlpha(0);
+    scene.stars.fillStyle(0xFFFFFF, 0.8);
+    for (let i=0; i<60; i++) {
+        let x = Phaser.Math.Between(0,800), y = Phaser.Math.Between(0,250), r = Phaser.Math.Between(1,2);
+        let star = scene.add.circle(x, y, r, 0xFFFFFF).setDepth(0.1).setAlpha(0);
+        scene.tweens.add({ targets: star, alpha: { from: 0.1, to: 0.8 }, duration: Phaser.Math.Between(1000, 3000), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 2000) });
+    }
 
     scene.celestial = scene.add.container(700, 100).setDepth(0.2);
     scene.sun = scene.add.graphics(); scene.sun.fillStyle(0xFFD700,1); scene.sun.fillCircle(0,0,50); scene.celestial.add(scene.sun);
     scene.moon = scene.add.graphics(); scene.moon.fillStyle(0xDFE6E9,1); scene.moon.fillCircle(0,0,45); scene.moon.setAlpha(0); scene.celestial.add(scene.moon);
 
     let env = scene.add.graphics().setDepth(0.3);
-    // Mountains shifted down 25px from original
+    // Mountains
     env.fillStyle(0x8B4513,1); env.fillTriangle(100,325,300,325,200,125);
     env.fillStyle(0xA0522D,1); env.fillTriangle(400,325,700,325,550,75);
     env.fillStyle(0xCD853F,1); env.fillTriangle(600,325,900,325,750,175);
-    // Ground shifted down 25px: y=200 -> y=225
+    
+    // Ground with "Sand Dunes" detail
     env.fillStyle(0xF4A460,1); env.fillRoundedRect(-50,225,900,425,50);
+    env.fillStyle(0xED9153,0.4); // Dune Highlights
+    for(let i=0; i<10; i++) env.fillEllipse(Phaser.Math.Between(0,800), Phaser.Math.Between(250,550), Phaser.Math.Between(100,300), 20);
+    
     env.fillStyle(0x2E8B57,1);
-    // Cacti shifted down 25px
     env.fillRoundedRect(50,172,20,60,10); env.fillRoundedRect(35,192,50,10,5);
     env.fillRoundedRect(720,202,20,50,8); env.fillRoundedRect(710,222,40,8,4);
 
@@ -263,6 +329,12 @@ class StartScene extends Phaser.Scene {
             font: '20px Arial', fill: '#FFF'
         }).setOrigin(0.5).setDepth(7);
 
+        // Start background music on user interaction (splash screen)
+        SoundEffect.startMusic();
+        
+        // Mute Button
+        this.addMuteButton();
+
         // Start Game button — wrapped in container so scale pivot is centered
         let btnX=400, btnY=390;
         let btnContainer = this.add.container(btnX, btnY).setDepth(8);
@@ -304,6 +376,8 @@ class TutorialScene extends Phaser.Scene {
         titleBar.fillStyle(0x8B4513,1); titleBar.fillRect(0,0,800,55);
         titleBar.fillStyle(0xA0522D,1); titleBar.fillRect(0,0,800,50);
         this.add.text(400,25,'How to Play',{font:'bold 28px Arial',fill:'#FFD700',stroke:'#000',strokeThickness:4}).setOrigin(0.5).setDepth(21);
+        
+        this.addMuteButton();
 
         // Skip button — solid pill background for readability
         let skipBg = this.add.graphics().setDepth(29);
@@ -528,6 +602,8 @@ class LevelSelectScene extends Phaser.Scene {
         this.createBtn(300,368,'Easy',  0x4CAF50,0x66BB6A, ()=>this.scene.start('GameScene',{level:'easy'}));
         this.createBtn(400,368,'Medium',0xFF9800,0xFFB74D, ()=>this.scene.start('GameScene',{level:'medium'}));
         this.createBtn(500,368,'Hard',  0xF44336,0xEF5350, ()=>this.scene.start('GameScene',{level:'hard'}));
+        
+        this.addMuteButton();
     }
     // Compact difficulty button (80x34)
     createBtn(x,y,text,col,hover,fn) {
@@ -580,6 +656,7 @@ class GameScene extends Phaser.Scene {
             }
         });
         this.events.on('scoreUpdate',()=>{ if(this.score>=this.targetScore/2) this.transitionToNight(); });
+        this.addMuteButton();
         this.queueSpawn();
     }
     transitionToNight() {
